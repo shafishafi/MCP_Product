@@ -1,0 +1,26 @@
+{
+  "name": "proposeit-mcp-server",
+  "version": "1.0.0",
+  "description": "Model Context Protocol (MCP) server for ProposeIt - generates proposals in Supabase",
+  "type": "module",
+  "main": "dist/index.js",
+  "bin": {
+    "proposeit-mcp": "./dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "tsc -w"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.6.1",
+    "@supabase/supabase-js": "^2.49.1",
+    "dotenv": "^16.4.7",
+    "zod": "^3.24.2"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.5",
+    "typescript": "^5.7.3"
+  }
+}
+

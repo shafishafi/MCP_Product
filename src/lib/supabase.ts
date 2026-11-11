@@ -1,0 +1,215 @@
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { Database, Proposal, UpdateProposalInput } from '../types/proposal';
+
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
+
+const isPlaceholderKey =
+  !supabaseUrl ||
+  !supabaseAnonKey ||
+  supabaseUrl.includes('placeholder') ||
+  supabaseAnonKey.includes('placeholder') ||
+  supabaseUrl === 'https://your-project.supabase.co';
+
+export const isConfigured = !isPlaceholderKey;
+
+export const supabase: SupabaseClient<Database> = createClient<Database>(
+  supabaseUrl || 'https://placeholder-project.supabase.co',
+  supabaseAnonKey || 'placeholder-anon-key'
+);
+
+// Initial seed proposals for mock/development mode
+const SEED_PROPOSALS: Proposal[] = [
+  {
+    id: 'prop-101',
+    client_name: 'Acme Global Ventures',
+    price: 8500,
+    status: 'approved',
+    scope_of_work: 'Complete overhaul of the customer onboarding flow, including design sprint, Figma interactive prototypes, and production React UI components.',
+    created_at: new Date(Date.now() - 3 * 86400000).toISOString(),
+  },
+  {
+    id: 'prop-102',
+    client_name: 'Starlight Studio',
+    price: 4200,
+    status: 'sent',
+    scope_of_work: 'Brand redesign, visual identity kit, typography system, and responsive landing page design in Tailwind CSS.',
+    created_at: new Date(Date.now() - 1 * 86400000).toISOString(),
+  },
+  {
+    id: 'prop-103',
+    client_name: 'Apex Healthtech',
+    price: 14500,
+    status: 'draft',
+    scope_of_work: 'HIPAA-compliant patient analytics portal architecture, FHIR data models, and real-time vital metrics dashboard.',
+    created_at: new Date().toISOString(),
+  },
+];
+
+const LOCAL_STORAGE_KEY = 'proposeit_demo_proposals_v1';
+
+function getLocalProposals(): Proposal[] {
+  try {
+    const raw = localStorage.getItem(LOCAL_STORAGE_KEY);
+    if (!raw) {
+      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(SEED_PROPOSALS));
+      return SEED_PROPOSALS;
+    }
+    return JSON.parse(raw);
+  } catch {
+    return SEED_PROPOSALS;
+  }
+}
+
+function saveLocalProposals(proposals: Proposal[]): void {
+  try {
+    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(proposals));
+  } catch (err) {
+    console.error('Failed to save to localStorage', err);
+  }
+}
+
+// Data fetching & mutation services
+export async function getProposals(): Promise<Proposal[]> {
+  if (isConfigured) {
+    const { data, error } = await supabase
+      .from('proposals')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.warn('Supabase fetch failed, falling back to local dataset:', error.message);
+      return getLocalProposals();
+    }
+    return data || [];
+  }
+
+  // Mock delay to simulate network feel
+  await new Promise((r) => setTimeout(r, 250));
+  return getLocalProposals();
+}
+
+export async function getProposalById(id: string): Promise<Proposal> {
+  if (isConfigured) {
+    const { data, error } = await supabase
+      .from('proposals')
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    if (error) {
+      console.warn(`Supabase getById failed for id ${id}, checking fallback:`, error.message);
+      const local = getLocalProposals().find((p) => p.id === id);
+      if (local) return local;
+      throw new Error(`Proposal not found with id: ${id}`);
+    }
+    return data;
+  }
+
+  await new Promise((r) => setTimeout(r, 200));
+  const local = getLocalProposals().find((p) => p.id === id);
+  if (!local) {
+    throw new Error(`Proposal not found with id: ${id}`);
+  }
+  return local;
+}
+
+export async function updateProposal(
+  id: string,
+  updates: UpdateProposalInput
+): Promise<Proposal> {
+  if (isConfigured) {
+    const { data, error } = await supabase
+      .from('proposals')
+      // @ts-expect-error Supabase types update payload inference
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) {
+      console.warn(`Supabase update failed for id ${id}, updating local state:`, error.message);
+      return updateLocalProposal(id, updates);
+    }
+    return data;
+  }
+
+  await new Promise((r) => setTimeout(r, 300));
+  return updateLocalProposal(id, updates);
+}
+
+function updateLocalProposal(id: string, updates: UpdateProposalInput): Proposal {
+  const proposals = getLocalProposals();
+  const index = proposals.findIndex((p) => p.id === id);
+  if (index === -1) {
+    throw new Error(`Proposal not found with id: ${id}`);
+  }
+  const updated: Proposal = {
+    ...proposals[index],
+    ...updates,
+  };
+  proposals[index] = updated;
+  saveLocalProposals(proposals);
+  return updated;
+}
+
+export async function createProposal(
+  proposal: Omit<Proposal, 'id' | 'created_at'>
+): Promise<Proposal> {
+  if (isConfigured) {
+    const { data, error } = await supabase
+      .from('proposals')
+      // @ts-expect-error Supabase types insert payload inference
+      .insert([proposal])
+      .select()
+      .single();
+
+    if (error) {
+      console.warn('Supabase insert failed, falling back to local:', error.message);
+      return createLocalProposal(proposal);
+    }
+    return data;
+  }
+
+  await new Promise((r) => setTimeout(r, 300));
+  return createLocalProposal(proposal);
+}
+
+function createLocalProposal(proposal: Omit<Proposal, 'id' | 'created_at'>): Proposal {
+  const proposals = getLocalProposals();
+  const created: Proposal = {
+    ...proposal,
+    id: `prop-${Date.now().toString(36)}`,
+    created_at: new Date().toISOString(),
+  };
+  proposals.unshift(created);
+  saveLocalProposals(proposals);
+  return created;
+}
+
+export async function deleteProposal(id: string): Promise<void> {
+  if (isConfigured) {
+    const { error } = await supabase
+      .from('proposals')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      console.warn('Supabase delete failed, removing locally:', error.message);
+    }
+  }
+
+  deleteLocalProposal(id);
+  await new Promise((r) => setTimeout(r, 200));
+}
+
+function deleteLocalProposal(id: string): void {
+  const proposals = getLocalProposals().filter((p) => p.id !== id);
+  saveLocalProposals(proposals);
+}
+
+export function resetDemoData(): Proposal[] {
+  saveLocalProposals(SEED_PROPOSALS);
+  return SEED_PROPOSALS;
+}
+
