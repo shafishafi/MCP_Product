@@ -20,6 +20,9 @@ import {
   MessageSquare,
   Sparkles,
   ArrowRight,
+  RotateCcw,
+  Globe,
+  FolderCode,
 } from 'lucide-react';
 
 interface Props {
@@ -35,6 +38,18 @@ export function McpConnectModal({ isOpen, onClose }: Props) {
   const [selectedOS, setSelectedOS] = useState<OS>('mac');
   const [selectedClient, setSelectedClient] = useState<Client>('claude');
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
+
+  // Auto-detect base server link & default script paths
+  const defaultMacPath = '/Users/shafi/prop/mcp-server/dist/index.js';
+  const defaultWinPath = 'C:\\Users\\shafi\\prop\\mcp-server\\dist\\index.js';
+
+  const [serverPath, setServerPath] = useState(defaultMacPath);
+  const [appServerUrl, setAppServerUrl] = useState(() => {
+    return typeof window !== 'undefined' && window.location.origin
+      ? window.location.origin
+      : 'http://localhost:5173';
+  });
+  const [showPathSettings, setShowPathSettings] = useState(false);
 
   // Custom prompt builder state
   const [promptClient, setPromptClient] = useState('PhonePe Media');
@@ -62,6 +77,24 @@ export function McpConnectModal({ isOpen, onClose }: Props) {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, onClose]);
 
+  // Automatically convert path between macOS and Windows formats when OS toggles
+  const handleOSChange = (newOS: OS) => {
+    setSelectedOS(newOS);
+    if (newOS === 'windows') {
+      if (serverPath.startsWith('/Users/')) {
+        setServerPath(serverPath.replace(/^\/Users\//, 'C:\\Users\\').replace(/\//g, '\\'));
+      } else if (!serverPath.includes(':\\')) {
+        setServerPath(defaultWinPath);
+      }
+    } else {
+      if (serverPath.match(/^[a-zA-Z]:\\Users\\/i)) {
+        setServerPath(serverPath.replace(/^[a-zA-Z]:\\Users\\/i, '/Users/').replace(/\\/g, '/'));
+      } else if (serverPath.includes('\\')) {
+        setServerPath(serverPath.replace(/\\/g, '/'));
+      }
+    }
+  };
+
   const simulateMutation = useMutation({
     mutationFn: async () => {
       if (!simClientName.trim()) throw new Error('Client name is required');
@@ -88,11 +121,6 @@ export function McpConnectModal({ isOpen, onClose }: Props) {
 
   if (!isOpen) return null;
 
-  // Paths for Mac & Windows
-  const macServerPath = '/Users/shafi/prop/mcp-server/dist/index.js';
-  const winServerPath = 'C:\\Users\\YourUsername\\prop\\mcp-server\\dist\\index.js';
-  const serverPath = selectedOS === 'mac' ? macServerPath : winServerPath;
-
   const macConfigPath = '~/Library/Application Support/Claude/claude_desktop_config.json';
   const winConfigPath = '%APPDATA%\\Claude\\claude_desktop_config.json';
   const configPath = selectedOS === 'mac' ? macConfigPath : winConfigPath;
@@ -101,18 +129,20 @@ export function McpConnectModal({ isOpen, onClose }: Props) {
   const winOpenCmd = `notepad %APPDATA%\\Claude\\claude_desktop_config.json`;
   const openCmd = selectedOS === 'mac' ? macOpenCmd : winOpenCmd;
 
-  // Dedicated prompt to give to an AI agent to connect itself
+  // Dedicated prompt to give to an AI agent to connect itself, with dynamic server link & path
   const aiConnectionPrompt = selectedOS === 'mac'
     ? `Please configure and connect the ProposeIt MCP server in your tools.
 - Command: node
-- Arguments: ["${macServerPath}"]
+- Arguments: ["${serverPath}"]
 - Server Name: proposeit
+- App Server Link: ${appServerUrl}
 Once connected, verify that the tools "create_proposal" and "list_proposals" are enabled and ready.`
     : `Please configure and connect the ProposeIt MCP server in your tools.
 - Command: node
-- Arguments: ["${winServerPath}"]
+- Arguments: ["${serverPath}"]
 - Config File: %APPDATA%\\Claude\\claude_desktop_config.json
 - Server Name: proposeit
+- App Server Link: ${appServerUrl}
 Once connected, verify that the tools "create_proposal" and "list_proposals" are enabled and ready.`;
 
   const claudeDesktopConfig = JSON.stringify(
@@ -131,10 +161,10 @@ Once connected, verify that the tools "create_proposal" and "list_proposals" are
   const cursorCommand = `node ${serverPath}`;
   const claudeCodeCmd = `claude mcp add proposeit -- node ${serverPath}`;
 
-  // Ready-to-use copyable proposal creation prompt
+  // Ready-to-use copyable proposal creation prompt incorporating server link
   const generatedAiPrompt = `Create a professional project proposal for client "${promptClient}" with an investment of ₹${(
     parseFloat(promptBudget) || 0
-  ).toLocaleString('en-IN')} covering: ${promptScope}. Use the create_proposal tool to save it into ProposeIt.`;
+  ).toLocaleString('en-IN')} covering: ${promptScope}. Use the create_proposal tool to save it into ProposeIt at ${appServerUrl}.`;
 
   const copyToClipboard = (text: string, key: string) => {
     try {
@@ -182,7 +212,7 @@ Once connected, verify that the tools "create_proposal" and "list_proposals" are
                 </span>
               </div>
               <p className="text-xs text-charcoal-muted">
-                Connect external AI agents (Claude, Cursor) or get ready-to-use prompts.
+                Connect external AI agents (Claude, Cursor) with auto-converting server links.
               </p>
             </div>
           </div>
@@ -235,8 +265,8 @@ Once connected, verify that the tools "create_proposal" and "list_proposals" are
         </div>
 
         {/* Body Content */}
-        <div className="p-6 overflow-y-auto space-y-5">
-          {/* TAB 1: SETUP (MAC + WINDOWS) */}
+        <div className="p-6 overflow-y-auto space-y-4">
+          {/* TAB 1: SETUP (MAC + WINDOWS WITH AUTO-CONVERTING SERVER LINK) */}
           {activeTab === 'setup' && (
             <div className="space-y-4">
               {/* OS & Client Selectors */}
@@ -246,7 +276,7 @@ Once connected, verify that the tools "create_proposal" and "list_proposals" are
                   <span className="text-xs font-bold text-charcoal">Operating System:</span>
                   <div className="flex bg-white rounded-lg p-0.5 border border-slate-200">
                     <button
-                      onClick={() => setSelectedOS('mac')}
+                      onClick={() => handleOSChange('mac')}
                       className={`px-2.5 py-1 text-xs font-semibold rounded-md transition-all ${
                         selectedOS === 'mac'
                           ? 'bg-emerald-600 text-white shadow-xs'
@@ -256,7 +286,7 @@ Once connected, verify that the tools "create_proposal" and "list_proposals" are
                       macOS
                     </button>
                     <button
-                      onClick={() => setSelectedOS('windows')}
+                      onClick={() => handleOSChange('windows')}
                       className={`px-2.5 py-1 text-xs font-semibold rounded-md transition-all ${
                         selectedOS === 'windows'
                           ? 'bg-emerald-600 text-white shadow-xs'
@@ -306,7 +336,76 @@ Once connected, verify that the tools "create_proposal" and "list_proposals" are
                 </div>
               </div>
 
-              {/* NEW: PROMPT TO CONNECT WITH AI'S MCP */}
+              {/* Dynamic Server Link & Path Configuration Bar */}
+              <div className="p-3 bg-emerald-50/70 border border-emerald-200/80 rounded-xl space-y-2">
+                <div className="flex items-center justify-between text-xs">
+                  <div className="flex items-center gap-1.5 font-bold text-emerald-950">
+                    <Globe className="h-3.5 w-3.5 text-emerald-700" />
+                    <span>Auto-Converted Server Link & Path</span>
+                  </div>
+                  <button
+                    onClick={() => setShowPathSettings(!showPathSettings)}
+                    className="text-[11px] text-primary hover:underline font-semibold"
+                  >
+                    {showPathSettings ? 'Hide Path Controls' : 'Edit Server Path / Link'}
+                  </button>
+                </div>
+
+                <div className="text-[11px] text-emerald-800 flex items-center justify-between">
+                  <span className="truncate max-w-[85%] font-mono">
+                    Script: <strong className="text-emerald-950">{serverPath}</strong>
+                  </span>
+                  <span className="text-[10px] bg-white text-emerald-800 font-bold px-1.5 py-0.5 rounded border border-emerald-200">
+                    {selectedOS === 'mac' ? 'POSIX Path' : 'Win32 Path'}
+                  </span>
+                </div>
+
+                {showPathSettings && (
+                  <div className="pt-2 border-t border-emerald-200 space-y-2.5">
+                    <div>
+                      <label className="block text-[11px] font-semibold text-emerald-900 mb-1 flex items-center justify-between">
+                        <span className="flex items-center gap-1">
+                          <FolderCode className="h-3 w-3" /> MCP Script Location:
+                        </span>
+                        <button
+                          onClick={() => setServerPath(selectedOS === 'mac' ? defaultMacPath : defaultWinPath)}
+                          className="text-[10px] text-primary hover:underline flex items-center gap-0.5"
+                        >
+                          <RotateCcw className="h-2.5 w-2.5" /> Reset to Default
+                        </button>
+                      </label>
+                      <Input
+                        value={serverPath}
+                        onChange={(e) => setServerPath(e.target.value)}
+                        placeholder={selectedOS === 'mac' ? defaultMacPath : defaultWinPath}
+                        className="text-xs font-mono h-8 bg-white"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-semibold text-emerald-900 mb-1 flex items-center justify-between">
+                        <span className="flex items-center gap-1">
+                          <Globe className="h-3 w-3" /> Web App Base Link:
+                        </span>
+                        <button
+                          onClick={() => setAppServerUrl(window.location.origin || 'http://localhost:5173')}
+                          className="text-[10px] text-primary hover:underline flex items-center gap-0.5"
+                        >
+                          <RotateCcw className="h-2.5 w-2.5" /> Detect Current Host
+                        </button>
+                      </label>
+                      <Input
+                        value={appServerUrl}
+                        onChange={(e) => setAppServerUrl(e.target.value)}
+                        placeholder="http://localhost:5173"
+                        className="text-xs font-mono h-8 bg-white"
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* PROMPT TO CONNECT WITH AI'S MCP (AUTOMATICALLY CONVERTED BASED ON SERVER LINK) */}
               <div className="p-4 rounded-xl bg-gradient-to-br from-emerald-50 via-white to-slate-50 border border-emerald-200 shadow-xs space-y-2.5">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold text-emerald-950 flex items-center gap-1.5">
@@ -314,7 +413,7 @@ Once connected, verify that the tools "create_proposal" and "list_proposals" are
                     Prompt Your AI to Connect Automatically
                   </span>
                   <span className="text-[10px] font-bold bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full border border-emerald-200">
-                    Recommended
+                    Dynamic Link Ready
                   </span>
                 </div>
                 <p className="text-xs text-emerald-800/90 leading-relaxed">
@@ -537,12 +636,12 @@ Once connected, verify that the tools "create_proposal" and "list_proposals" are
                 <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs flex items-center justify-between gap-3">
                   <div>
                     <p className="font-semibold text-charcoal">Quick Website Redesign Proposal</p>
-                    <p className="text-[11px] text-charcoal-muted">Creates a ₹1,50,000 Next.js landing page proposal</p>
+                    <p className="text-[11px] text-charcoal-muted">Creates a ₹1,50,000 Next.js landing page proposal at {appServerUrl}</p>
                   </div>
                   <button
                     onClick={() =>
                       copyToClipboard(
-                        'Create a proposal for "Acme Global" with price 150000 INR for responsive landing page redesign in Tailwind CSS with micro-interactions, using the create_proposal tool.',
+                        `Create a proposal for "Acme Global" with price 150000 INR for responsive landing page redesign in Tailwind CSS with micro-interactions, using the create_proposal tool on ${appServerUrl}.`,
                         'preset1'
                       )
                     }
@@ -598,19 +697,19 @@ Once connected, verify that the tools "create_proposal" and "list_proposals" are
                   </p>
                   <div className="flex items-center gap-3 pt-1">
                     <a
-                      href={`/edit/${simResult.id}`}
+                      href={`${appServerUrl}/edit/${simResult.id}`}
                       className="font-bold text-primary inline-flex items-center gap-1 hover:underline text-xs"
                     >
-                      Open in Editor <ArrowRight className="h-3.5 w-3.5" />
+                      Open in Editor <ArrowRight className="h-3 w-3" />
                     </a>
                     <span className="text-slate-300">|</span>
                     <a
-                      href={`/p/${simResult.id}`}
+                      href={`${appServerUrl}/p/${simResult.id}`}
                       target="_blank"
                       rel="noreferrer"
                       className="font-bold text-primary inline-flex items-center gap-1 hover:underline text-xs"
                     >
-                      Public Client View <ExternalLink className="h-3.5 w-3.5" />
+                      Public Client View <ExternalLink className="h-3 w-3" />
                     </a>
                   </div>
                 </div>

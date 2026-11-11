@@ -34,6 +34,12 @@ const supabaseKey =
   process.env.VITE_SUPABASE_ANON_KEY ||
   '';
 
+// Server Link / Base URL for web dashboard and proposal links
+const appBaseUrl =
+  process.env.APP_URL ||
+  process.env.VITE_APP_URL ||
+  'http://localhost:5173';
+
 function isSupabaseConfigured(): boolean {
   return Boolean(
     supabaseUrl &&
@@ -189,7 +195,7 @@ server.tool(
             content: [
               {
                 type: 'text',
-                text: `Proposal created successfully in Supabase!\n\nID: ${data.id}\nClient: ${data.client_name}\nPrice: ₹${data.price.toLocaleString('en-IN')}\nStatus: ${data.status}\nCreated At: ${data.created_at}\n\nView or edit in your ProposeIt Dashboard at: http://localhost:5173/edit/${data.id}`,
+                text: `Proposal created successfully in Supabase!\n\nID: ${data.id}\nClient: ${data.client_name}\nPrice: ₹${data.price.toLocaleString('en-IN')}\nStatus: ${data.status}\nCreated At: ${data.created_at}\n\nView or edit in your ProposeIt Dashboard at: ${appBaseUrl}/edit/${data.id}`,
               },
             ],
           };
@@ -213,7 +219,7 @@ server.tool(
         content: [
           {
             type: 'text',
-            text: `Proposal created successfully in Local Demo Mode (No Supabase required)!\n\nID: ${localProposal.id}\nClient: ${localProposal.client_name}\nPrice: ₹${localProposal.price.toLocaleString('en-IN')}\nStatus: ${localProposal.status}\nCreated At: ${localProposal.created_at}\n\nView or edit in your ProposeIt Dashboard at: http://localhost:5173/edit/${localProposal.id}\nPublic Client Link: http://localhost:5173/p/${localProposal.id}`,
+            text: `Proposal created successfully in Local Demo Mode (No Supabase required)!\n\nID: ${localProposal.id}\nClient: ${localProposal.client_name}\nPrice: ₹${localProposal.price.toLocaleString('en-IN')}\nStatus: ${localProposal.status}\nCreated At: ${localProposal.created_at}\n\nView or edit in your ProposeIt Dashboard at: ${appBaseUrl}/edit/${localProposal.id}\nPublic Client Link: ${appBaseUrl}/p/${localProposal.id}`,
           },
         ],
       };
@@ -293,7 +299,7 @@ server.tool(
       const formatted = proposals
         .map(
           (p, i) =>
-            `${i + 1}. [${p.id}] ${p.client_name} - ₹${p.price.toLocaleString('en-IN')} (${p.status.toUpperCase()})\n   Created: ${p.created_at}\n   Link: http://localhost:5173/edit/${p.id}`
+            `${i + 1}. [${p.id}] ${p.client_name} - ₹${p.price.toLocaleString('en-IN')} (${p.status.toUpperCase()})\n   Created: ${p.created_at}\n   Link: ${appBaseUrl}/edit/${p.id}`
         )
         .join('\n\n');
 
@@ -360,7 +366,7 @@ server.tool(
         content: [
           {
             type: 'text',
-            text: `Proposal Details:\n\nID: ${proposal.id}\nClient Name: ${proposal.client_name}\nPrice: ₹${proposal.price.toLocaleString('en-IN')}\nStatus: ${proposal.status}\nCreated At: ${proposal.created_at}\n\nScope of Work:\n${proposal.scope_of_work}\n\nDashboard: http://localhost:5173/edit/${proposal.id}\nPublic Client Link: http://localhost:5173/p/${proposal.id}`,
+            text: `Proposal Details:\n\nID: ${proposal.id}\nClient Name: ${proposal.client_name}\nPrice: ₹${proposal.price.toLocaleString('en-IN')}\nStatus: ${proposal.status}\nCreated At: ${proposal.created_at}\n\nScope of Work:\n${proposal.scope_of_work}\n\nDashboard: ${appBaseUrl}/edit/${proposal.id}\nPublic Client Link: ${appBaseUrl}/p/${proposal.id}`,
           },
         ],
       };
