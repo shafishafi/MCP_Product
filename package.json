@@ -6,7 +6,10 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "mcp": "node ./mcp-server/dist/index.js",
+    "mcp:build": "npm --prefix mcp-server run build",
+    "mcp:test": "npm --prefix mcp-server run test:suite"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.49.1",

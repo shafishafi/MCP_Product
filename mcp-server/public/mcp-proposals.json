@@ -1,5 +1,21 @@
 [
   {
+    "id": "prop-mcp-mwcruarq",
+    "client_name": "Razorpay Financial Technologies",
+    "scope_of_work": "Enterprise payment orchestration gateway with multi-currency routing, instant refund webhooks, and automated fraud detection pipeline.",
+    "price": 350000,
+    "status": "draft",
+    "created_at": "2026-11-11T23:50:02.246Z"
+  },
+  {
+    "id": "prop-mcp-mwcruarq",
+    "client_name": "Razorpay Financial Technologies",
+    "scope_of_work": "Enterprise payment orchestration gateway with multi-currency routing, instant refund webhooks, and automated fraud detection pipeline.",
+    "price": 350000,
+    "status": "draft",
+    "created_at": "2026-11-11T23:50:02.246Z"
+  },
+  {
     "id": "prop-mcp-mwcqr6kg",
     "client_name": "Razorpay Financial Technologies",
     "scope_of_work": "Enterprise payment orchestration gateway with multi-currency routing, instant refund webhooks, and automated fraud detection pipeline.",
