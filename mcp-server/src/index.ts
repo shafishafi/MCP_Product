@@ -54,6 +54,28 @@ interface ProposalRecord {
   created_at: string;
 }
 
+function getLocalProposalsFromFile(): ProposalRecord[] {
+  const possiblePaths = [
+    path.resolve(__dirname, '../../public/mcp-proposals.json'),
+    path.resolve(__dirname, '../public/mcp-proposals.json'),
+    path.resolve(process.cwd(), 'public/mcp-proposals.json'),
+    path.resolve(__dirname, '../local-proposals.json'),
+  ];
+
+  for (const filePath of possiblePaths) {
+    if (fs.existsSync(filePath)) {
+      try {
+        const raw = fs.readFileSync(filePath, 'utf-8');
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) return parsed;
+      } catch {
+        // Continue
+      }
+    }
+  }
+  return [];
+}
+
 // Local file persistence helper for Zero-Config / Demo mode
 function saveLocalProposalFile(proposal: ProposalRecord) {
   const possiblePaths = [
@@ -101,7 +123,7 @@ server.tool(
   {
     clientName: z.string().describe('The name of the client or company'),
     scopeOfWork: z.string().describe('Detailed scope of work, deliverables, and project milestones'),
-    price: z.number().describe('Fixed proposal price in USD'),
+    price: z.number().describe('Fixed proposal price in INR (Indian Rupees ₹)'),
   },
   async ({ clientName, scopeOfWork, price }) => {
     try {
@@ -156,7 +178,7 @@ server.tool(
             content: [
               {
                 type: 'text',
-                text: `Proposal created successfully in Supabase!\n\nID: ${data.id}\nClient: ${data.client_name}\nPrice: $${data.price}\nStatus: ${data.status}\nCreated At: ${data.created_at}\n\nView or edit in your ProposeIt Dashboard at: http://localhost:5173/edit/${data.id}`,
+                text: `Proposal created successfully in Supabase!\n\nID: ${data.id}\nClient: ${data.client_name}\nPrice: ₹${data.price.toLocaleString('en-IN')}\nStatus: ${data.status}\nCreated At: ${data.created_at}\n\nView or edit in your ProposeIt Dashboard at: http://localhost:5173/edit/${data.id}`,
               },
             ],
           };
@@ -180,7 +202,7 @@ server.tool(
         content: [
           {
             type: 'text',
-            text: `Proposal created successfully in Local Demo Mode (No Supabase required)!\n\nID: ${localProposal.id}\nClient: ${localProposal.client_name}\nPrice: $${localProposal.price}\nStatus: ${localProposal.status}\nCreated At: ${localProposal.created_at}\n\nView or edit in your ProposeIt Dashboard at: http://localhost:5173/edit/${localProposal.id}\nPublic Client Link: http://localhost:5173/p/${localProposal.id}`,
+            text: `Proposal created successfully in Local Demo Mode (No Supabase required)!\n\nID: ${localProposal.id}\nClient: ${localProposal.client_name}\nPrice: ₹${localProposal.price.toLocaleString('en-IN')}\nStatus: ${localProposal.status}\nCreated At: ${localProposal.created_at}\n\nView or edit in your ProposeIt Dashboard at: http://localhost:5173/edit/${localProposal.id}\nPublic Client Link: http://localhost:5173/p/${localProposal.id}`,
           },
         ],
       };
@@ -200,7 +222,148 @@ server.tool(
   }
 );
 
-// 3. Start MCP Stdout/Stdio Transport
+// 3. Register `list_proposals` Tool
+server.tool(
+  'list_proposals',
+  'Lists recent proposals from the ProposeIt database, optionally filtered by status.',
+  {
+    status: z
+      .enum(['all', 'draft', 'sent', 'approved'])
+      .optional()
+      .describe('Filter proposals by status'),
+    limit: z
+      .number()
+      .min(1)
+      .max(100)
+      .optional()
+      .describe('Maximum number of proposals to return (default 20)'),
+  },
+  async ({ status = 'all', limit = 20 }) => {
+    try {
+      const client = getSupabaseClient();
+      let proposals: ProposalRecord[] = [];
+
+      if (client) {
+        let query = client
+          .from('proposals')
+          .select('*')
+          .order('created_at', { ascending: false })
+          .limit(limit);
+
+        if (status !== 'all') {
+          query = query.eq('status', status);
+        }
+
+        const { data, error } = await query;
+        if (!error && data) {
+          proposals = data;
+        } else {
+          proposals = getLocalProposalsFromFile();
+        }
+      } else {
+        proposals = getLocalProposalsFromFile();
+        if (status !== 'all') {
+          proposals = proposals.filter((p) => p.status === status);
+        }
+        proposals = proposals.slice(0, limit);
+      }
+
+      if (proposals.length === 0) {
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `No proposals found matching status: "${status}".`,
+            },
+          ],
+        };
+      }
+
+      const formatted = proposals
+        .map(
+          (p, i) =>
+            `${i + 1}. [${p.id}] ${p.client_name} - ₹${p.price.toLocaleString('en-IN')} (${p.status.toUpperCase()})\n   Created: ${p.created_at}\n   Link: http://localhost:5173/edit/${p.id}`
+        )
+        .join('\n\n');
+
+      return {
+        content: [
+          {
+            type: 'text',
+            text: `Found ${proposals.length} proposal(s):\n\n${formatted}`,
+          },
+        ],
+      };
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Unknown error';
+      return {
+        isError: true,
+        content: [{ type: 'text', text: `Failed to list proposals: ${message}` }],
+      };
+    }
+  }
+);
+
+// 4. Register `get_proposal` Tool
+server.tool(
+  'get_proposal',
+  'Retrieves the full details of a single proposal by ID from ProposeIt.',
+  {
+    proposalId: z.string().describe('The ID of the proposal to inspect'),
+  },
+  async ({ proposalId }) => {
+    try {
+      const client = getSupabaseClient();
+      let proposal: ProposalRecord | null = null;
+
+      if (client) {
+        const { data, error } = await client
+          .from('proposals')
+          .select('*')
+          .eq('id', proposalId)
+          .single();
+
+        if (!error && data) {
+          proposal = data;
+        }
+      }
+
+      if (!proposal) {
+        const local = getLocalProposalsFromFile().find((p) => p.id === proposalId);
+        if (local) proposal = local;
+      }
+
+      if (!proposal) {
+        return {
+          isError: true,
+          content: [
+            {
+              type: 'text',
+              text: `Proposal with ID "${proposalId}" not found.`,
+            },
+          ],
+        };
+      }
+
+      return {
+        content: [
+          {
+            type: 'text',
+            text: `Proposal Details:\n\nID: ${proposal.id}\nClient Name: ${proposal.client_name}\nPrice: ₹${proposal.price.toLocaleString('en-IN')}\nStatus: ${proposal.status}\nCreated At: ${proposal.created_at}\n\nScope of Work:\n${proposal.scope_of_work}\n\nDashboard: http://localhost:5173/edit/${proposal.id}\nPublic Client Link: http://localhost:5173/p/${proposal.id}`,
+          },
+        ],
+      };
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Unknown error';
+      return {
+        isError: true,
+        content: [{ type: 'text', text: `Failed to get proposal: ${message}` }],
+      };
+    }
+  }
+);
+
+// 5. Start MCP Stdout/Stdio Transport
 async function main() {
   const transport = new StdioServerTransport();
   await server.connect(transport);

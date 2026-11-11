@@ -6,7 +6,7 @@ import { useUIStore } from '../../store/uiStore';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Textarea } from '../ui/textarea';
-import { X, DollarSign, User, FileText } from 'lucide-react';
+import { X, IndianRupee, User, FileText } from 'lucide-react';
 
 interface Props {
   isOpen: boolean;
@@ -18,7 +18,7 @@ export function CreateProposalModal({ isOpen, onClose }: Props) {
   const { notifySuccess, notifyError } = useUIStore();
 
   const [clientName, setClientName] = useState('');
-  const [price, setPrice] = useState('5000');
+  const [price, setPrice] = useState('75000');
   const [status, setStatus] = useState<ProposalStatus>('draft');
   const [scopeOfWork, setScopeOfWork] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -119,12 +119,12 @@ export function CreateProposalModal({ isOpen, onClose }: Props) {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-semibold text-charcoal-muted uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
-                <DollarSign className="h-3.5 w-3.5 text-slate-500" />
-                Proposed Price ($ USD)
+                <IndianRupee className="h-3.5 w-3.5 text-slate-500" />
+                Proposed Price (₹ INR)
               </label>
               <Input
                 type="number"
-                placeholder="5000"
+                placeholder="75000"
                 value={price}
                 onChange={(e) => {
                   setPrice(e.target.value);

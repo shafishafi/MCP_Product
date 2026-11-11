@@ -14,7 +14,7 @@ import {
   ArrowLeft,
   Save,
   ExternalLink,
-  DollarSign,
+  IndianRupee,
   User,
   FileText,
   AlertCircle,
@@ -280,8 +280,8 @@ export function EditorPage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-semibold text-charcoal-muted uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
-                    <DollarSign className="h-3.5 w-3.5 text-slate-400" />
-                    Price ($ USD)
+                    <IndianRupee className="h-3.5 w-3.5 text-slate-400" />
+                    Price (₹ INR)
                   </label>
                   <Input
                     type="number"
@@ -290,7 +290,7 @@ export function EditorPage() {
                       setPrice(e.target.value);
                       if (errors.price) setErrors({ ...errors, price: '' });
                     }}
-                    placeholder="e.g. 7500"
+                    placeholder="e.g. 75000"
                     error={errors.price}
                   />
                 </div>

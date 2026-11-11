@@ -32,7 +32,7 @@ serverProcess.stdout.on('data', (data) => {
               arguments: {
                 clientName: 'Nike Innovations Lab',
                 scopeOfWork: 'Interactive 3D product showcase and next-gen e-commerce checkout integration.',
-                price: 18500,
+                price: 150000,
               },
             },
           }) + '\n'

@@ -23,7 +23,7 @@ const SEED_PROPOSALS: Proposal[] = [
   {
     id: 'prop-101',
     client_name: 'Acme Global Ventures',
-    price: 8500,
+    price: 250000,
     status: 'approved',
     scope_of_work: 'Complete overhaul of the customer onboarding flow, including design sprint, Figma interactive prototypes, and production React UI components.',
     created_at: new Date(Date.now() - 3 * 86400000).toISOString(),
@@ -31,7 +31,7 @@ const SEED_PROPOSALS: Proposal[] = [
   {
     id: 'prop-102',
     client_name: 'Starlight Studio',
-    price: 4200,
+    price: 85000,
     status: 'sent',
     scope_of_work: 'Brand redesign, visual identity kit, typography system, and responsive landing page design in Tailwind CSS.',
     created_at: new Date(Date.now() - 1 * 86400000).toISOString(),
@@ -39,14 +39,14 @@ const SEED_PROPOSALS: Proposal[] = [
   {
     id: 'prop-103',
     client_name: 'Apex Healthtech',
-    price: 14500,
+    price: 480000,
     status: 'draft',
     scope_of_work: 'HIPAA-compliant patient analytics portal architecture, FHIR data models, and real-time vital metrics dashboard.',
     created_at: new Date().toISOString(),
   },
 ];
 
-const LOCAL_STORAGE_KEY = 'proposeit_demo_proposals_v1';
+const LOCAL_STORAGE_KEY = 'proposeit_demo_proposals_v2_inr';
 
 function getLocalProposals(): Proposal[] {
   try {
