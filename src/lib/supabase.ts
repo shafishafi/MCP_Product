@@ -47,15 +47,37 @@ const SEED_PROPOSALS: Proposal[] = [
 ];
 
 const LOCAL_STORAGE_KEY = 'proposeit_demo_proposals_v2_inr';
+const DELETED_STORAGE_KEY = 'proposeit_deleted_ids_v2_inr';
+
+function getDeletedProposalIds(): Set<string> {
+  try {
+    const raw = localStorage.getItem(DELETED_STORAGE_KEY);
+    return raw ? new Set(JSON.parse(raw)) : new Set();
+  } catch {
+    return new Set();
+  }
+}
+
+function markProposalAsDeleted(id: string): void {
+  try {
+    const deleted = getDeletedProposalIds();
+    deleted.add(id);
+    localStorage.setItem(DELETED_STORAGE_KEY, JSON.stringify(Array.from(deleted)));
+  } catch (err) {
+    console.error('Failed to mark as deleted', err);
+  }
+}
 
 function getLocalProposals(): Proposal[] {
   try {
     const raw = localStorage.getItem(LOCAL_STORAGE_KEY);
+    const deletedIds = getDeletedProposalIds();
     if (!raw) {
       localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(SEED_PROPOSALS));
       return SEED_PROPOSALS;
     }
-    return JSON.parse(raw);
+    const parsed: Proposal[] = JSON.parse(raw);
+    return parsed.filter((p) => !deletedIds.has(p.id));
   } catch {
     return SEED_PROPOSALS;
   }
@@ -78,7 +100,13 @@ async function syncMcpProposals(): Promise<void> {
       if (Array.isArray(mcpItems) && mcpItems.length > 0) {
         const current = getLocalProposals();
         const existingIds = new Set(current.map((p) => p.id));
-        const newItems = mcpItems.filter((p) => !existingIds.has(p.id));
+        const deletedIds = getDeletedProposalIds();
+        
+        // Never resurrect proposals the user has deleted
+        const newItems = mcpItems.filter(
+          (p) => !existingIds.has(p.id) && !deletedIds.has(p.id)
+        );
+
         if (newItems.length > 0) {
           saveLocalProposals([...newItems, ...current]);
         }
@@ -228,11 +256,17 @@ export async function deleteProposal(id: string): Promise<void> {
 }
 
 function deleteLocalProposal(id: string): void {
+  markProposalAsDeleted(id);
   const proposals = getLocalProposals().filter((p) => p.id !== id);
   saveLocalProposals(proposals);
 }
 
 export function resetDemoData(): Proposal[] {
+  try {
+    localStorage.removeItem(DELETED_STORAGE_KEY);
+  } catch {
+    // Ignore
+  }
   saveLocalProposals(SEED_PROPOSALS);
   return SEED_PROPOSALS;
 }

@@ -300,10 +300,23 @@ export function DashboardPage() {
                   : 'Start by creating your first client proposal or generate one via the MCP server.'}
               </p>
               <div className="mt-4">
-                <Button size="sm" onClick={() => setIsCreateOpen(true)}>
-                  <Plus className="h-4 w-4 mr-1.5" />
-                  Create First Proposal
-                </Button>
+                {searchQuery || filterStatus !== 'all' ? (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      setSearchQuery('');
+                      setFilterStatus('all');
+                    }}
+                  >
+                    Clear Filters
+                  </Button>
+                ) : (
+                  <Button size="sm" onClick={() => setIsCreateOpen(true)}>
+                    <Plus className="h-4 w-4 mr-1.5" />
+                    Create First Proposal
+                  </Button>
+                )}
               </div>
             </div>
           ) : (
