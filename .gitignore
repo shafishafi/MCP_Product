@@ -33,3 +33,4 @@ mcp-server/.env.local
 
 # MCP Server Build
 mcp-server/dist
+

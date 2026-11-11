@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useParams, Link, useNavigate } from '@tanstack/react-router';
-import { getProposalById, updateProposal } from '../lib/supabase';
+import { getProposalById, updateProposal, deleteProposal } from '../lib/supabase';
 import { ProposalStatus, UpdateProposalInput } from '../types/proposal';
 import { formatCurrency, formatDate } from '../lib/utils';
 import { useUIStore } from '../store/uiStore';
@@ -20,6 +20,8 @@ import {
   AlertCircle,
   RefreshCw,
   CheckCircle,
+  Copy,
+  Trash2,
 } from 'lucide-react';
 
 export function EditorPage() {
@@ -74,6 +76,24 @@ export function EditorPage() {
       notifyError('Save Failed', err.message);
     },
   });
+
+  const deleteMutation = useMutation({
+    mutationFn: () => deleteProposal(proposalId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['proposals'] });
+      notifySuccess('Proposal Deleted', 'Proposal has been removed.');
+      navigate({ to: '/' });
+    },
+    onError: (err: Error) => {
+      notifyError('Delete Failed', err.message);
+    },
+  });
+
+  const handleCopyLink = () => {
+    const url = `${window.location.origin}/p/${proposalId}`;
+    navigator.clipboard.writeText(url);
+    notifySuccess('Link Copied', 'Public proposal link copied to clipboard.');
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -158,6 +178,18 @@ export function EditorPage() {
         </div>
 
         <div className="flex items-center gap-2">
+          {/* Copy Share Link */}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleCopyLink}
+            className="gap-1.5 text-xs hidden sm:inline-flex"
+            title="Copy Public Link"
+          >
+            <Copy className="h-3.5 w-3.5" />
+            <span>Copy Link</span>
+          </Button>
+
           {/* Public Preview Button */}
           <Link
             to="/p/$proposalId"
@@ -170,6 +202,23 @@ export function EditorPage() {
               <span>Client View</span>
             </Button>
           </Link>
+
+          {/* Delete Button */}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              if (window.confirm(`Delete proposal for "${clientName || 'this client'}"?`)) {
+                deleteMutation.mutate();
+              }
+            }}
+            disabled={deleteMutation.isPending}
+            className="gap-1.5 text-xs text-red-600 hover:text-red-700 hover:bg-red-50"
+            title="Delete Proposal"
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">Delete</span>
+          </Button>
 
           {/* Primary Save Button */}
           <Button

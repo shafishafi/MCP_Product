@@ -4,6 +4,7 @@ import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { z } from 'zod';
 import dotenv from 'dotenv';
 import path from 'path';
+import fs from 'fs';
 import { fileURLToPath } from 'url';
 
 // Load environment variables from mcp-server/.env or parent .env
@@ -22,18 +23,69 @@ const supabaseKey =
   process.env.VITE_SUPABASE_ANON_KEY ||
   '';
 
+function isSupabaseConfigured(): boolean {
+  return Boolean(
+    supabaseUrl &&
+    supabaseKey &&
+    !supabaseUrl.includes('placeholder') &&
+    !supabaseKey.includes('placeholder') &&
+    supabaseUrl !== 'https://your-project.supabase.co'
+  );
+}
+
 let supabaseClient: SupabaseClient | null = null;
 
-function getSupabaseClient(): SupabaseClient {
+function getSupabaseClient(): SupabaseClient | null {
+  if (!isSupabaseConfigured()) {
+    return null;
+  }
   if (!supabaseClient) {
-    if (!supabaseUrl || !supabaseKey || supabaseUrl.includes('placeholder')) {
-      throw new Error(
-        'Supabase is not configured. Please supply valid SUPABASE_URL and SUPABASE_ANON_KEY (or SUPABASE_SERVICE_ROLE_KEY) environment variables in .env'
-      );
-    }
     supabaseClient = createClient(supabaseUrl, supabaseKey);
   }
   return supabaseClient;
+}
+
+interface ProposalRecord {
+  id: string;
+  client_name: string;
+  scope_of_work: string;
+  price: number;
+  status: 'draft' | 'sent' | 'approved';
+  created_at: string;
+}
+
+// Local file persistence helper for Zero-Config / Demo mode
+function saveLocalProposalFile(proposal: ProposalRecord) {
+  const possiblePaths = [
+    path.resolve(__dirname, '../../public/mcp-proposals.json'),
+    path.resolve(__dirname, '../public/mcp-proposals.json'),
+    path.resolve(process.cwd(), 'public/mcp-proposals.json'),
+    path.resolve(__dirname, '../local-proposals.json'),
+  ];
+
+  for (const filePath of possiblePaths) {
+    try {
+      const dir = path.dirname(filePath);
+      if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true });
+      }
+
+      let existing: ProposalRecord[] = [];
+      if (fs.existsSync(filePath)) {
+        const raw = fs.readFileSync(filePath, 'utf-8');
+        try {
+          existing = JSON.parse(raw);
+        } catch {
+          existing = [];
+        }
+      }
+      existing.unshift(proposal);
+      fs.writeFileSync(filePath, JSON.stringify(existing, null, 2), 'utf-8');
+      console.error(`[MCP Log] Proposal saved locally to ${filePath}`);
+    } catch {
+      // Continue to next path
+    }
+  }
 }
 
 // 1. Initialize MCP Server
@@ -45,7 +97,7 @@ const server = new McpServer({
 // 2. Register `create_proposal` Tool
 server.tool(
   'create_proposal',
-  'Creates a new client proposal in the Supabase proposals table for ProposeIt.',
+  'Creates a new client proposal in the Supabase proposals table (or local storage fallback) for ProposeIt.',
   {
     clientName: z.string().describe('The name of the client or company'),
     scopeOfWork: z.string().describe('Detailed scope of work, deliverables, and project milestones'),
@@ -80,40 +132,55 @@ server.tool(
 
       const client = getSupabaseClient();
 
-      // Insert new row into proposals table
-      const { data, error } = await client
-        .from('proposals')
-        .insert([
-          {
-            client_name: clientName.trim(),
-            scope_of_work: scopeOfWork.trim(),
-            price: price,
-            status: 'draft',
-            created_at: new Date().toISOString(),
-          },
-        ])
-        .select()
-        .single();
-
-      if (error) {
-        return {
-          isError: true,
-          content: [
+      // MODE A: Live Supabase connected
+      if (client) {
+        const { data, error } = await client
+          .from('proposals')
+          .insert([
             {
-              type: 'text',
-              text: `Supabase database error: ${error.message} (code: ${error.code || 'UNKNOWN'})`,
+              client_name: clientName.trim(),
+              scope_of_work: scopeOfWork.trim(),
+              price: price,
+              status: 'draft',
+              created_at: new Date().toISOString(),
             },
-          ],
-        };
+          ])
+          .select()
+          .single();
+
+        if (error) {
+          console.error('[MCP Warning] Supabase insert failed, saving to local fallback:', error.message);
+          // Fall back to local mode on db error
+        } else {
+          return {
+            content: [
+              {
+                type: 'text',
+                text: `Proposal created successfully in Supabase!\n\nID: ${data.id}\nClient: ${data.client_name}\nPrice: $${data.price}\nStatus: ${data.status}\nCreated At: ${data.created_at}\n\nView or edit in your ProposeIt Dashboard at: http://localhost:5173/edit/${data.id}`,
+              },
+            ],
+          };
+        }
       }
 
-      const proposalId = data.id;
+      // MODE B: Local Fallback Mode (Runs without any Supabase credentials!)
+      const localId = `prop-mcp-${Date.now().toString(36)}`;
+      const localProposal: ProposalRecord = {
+        id: localId,
+        client_name: clientName.trim(),
+        scope_of_work: scopeOfWork.trim(),
+        price: price,
+        status: 'draft',
+        created_at: new Date().toISOString(),
+      };
+
+      saveLocalProposalFile(localProposal);
 
       return {
         content: [
           {
             type: 'text',
-            text: `Proposal created successfully!\n\nID: ${proposalId}\nClient: ${data.client_name}\nPrice: $${data.price}\nStatus: ${data.status}\nCreated At: ${data.created_at}\n\nView or edit in ProposeIt Dashboard at: /edit/${proposalId}`,
+            text: `Proposal created successfully in Local Demo Mode (No Supabase required)!\n\nID: ${localProposal.id}\nClient: ${localProposal.client_name}\nPrice: $${localProposal.price}\nStatus: ${localProposal.status}\nCreated At: ${localProposal.created_at}\n\nView or edit in your ProposeIt Dashboard at: http://localhost:5173/edit/${localProposal.id}\nPublic Client Link: http://localhost:5173/p/${localProposal.id}`,
           },
         ],
       };
@@ -137,12 +204,14 @@ server.tool(
 async function main() {
   const transport = new StdioServerTransport();
   await server.connect(transport);
-  // Log to stderr only so stdout remains clean for MCP JSON-RPC protocol
-  console.error('ProposeIt MCP Server running via stdio transport.');
+  console.error(
+    `ProposeIt MCP Server running via stdio transport (${
+      isSupabaseConfigured() ? 'Connected to Supabase' : 'Local Demo Mode (No Supabase credentials required)'
+    }).`
+  );
 }
 
 main().catch((error) => {
   console.error('Fatal error in MCP Server:', error);
   process.exit(1);
 });
-

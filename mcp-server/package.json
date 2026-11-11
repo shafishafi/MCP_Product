@@ -10,7 +10,8 @@
   "scripts": {
     "build": "tsc",
     "start": "node dist/index.js",
-    "dev": "tsc -w"
+    "dev": "tsc -w",
+    "test:create": "node test-create.js"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.6.1",
