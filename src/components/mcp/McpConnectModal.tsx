@@ -90,7 +90,7 @@ export function McpConnectModal({ isOpen, onClose }: Props) {
 
   // Paths for Mac & Windows
   const macServerPath = '/Users/shafi/prop/mcp-server/dist/index.js';
-  const winServerPath = 'C:\\\\Users\\\\YourUsername\\\\prop\\\\mcp-server\\\\dist\\\\index.js';
+  const winServerPath = 'C:\\Users\\YourUsername\\prop\\mcp-server\\dist\\index.js';
   const serverPath = selectedOS === 'mac' ? macServerPath : winServerPath;
 
   const macConfigPath = '~/Library/Application Support/Claude/claude_desktop_config.json';
@@ -100,6 +100,20 @@ export function McpConnectModal({ isOpen, onClose }: Props) {
   const macOpenCmd = `open ~/Library/Application\\ Support/Claude/claude_desktop_config.json`;
   const winOpenCmd = `notepad %APPDATA%\\Claude\\claude_desktop_config.json`;
   const openCmd = selectedOS === 'mac' ? macOpenCmd : winOpenCmd;
+
+  // Dedicated prompt to give to an AI agent to connect itself
+  const aiConnectionPrompt = selectedOS === 'mac'
+    ? `Please configure and connect the ProposeIt MCP server in your tools.
+- Command: node
+- Arguments: ["${macServerPath}"]
+- Server Name: proposeit
+Once connected, verify that the tools "create_proposal" and "list_proposals" are enabled and ready.`
+    : `Please configure and connect the ProposeIt MCP server in your tools.
+- Command: node
+- Arguments: ["${winServerPath}"]
+- Config File: %APPDATA%\\Claude\\claude_desktop_config.json
+- Server Name: proposeit
+Once connected, verify that the tools "create_proposal" and "list_proposals" are enabled and ready.`;
 
   const claudeDesktopConfig = JSON.stringify(
     {
@@ -117,7 +131,7 @@ export function McpConnectModal({ isOpen, onClose }: Props) {
   const cursorCommand = `node ${serverPath}`;
   const claudeCodeCmd = `claude mcp add proposeit -- node ${serverPath}`;
 
-  // Ready-to-use copyable prompt
+  // Ready-to-use copyable proposal creation prompt
   const generatedAiPrompt = `Create a professional project proposal for client "${promptClient}" with an investment of ₹${(
     parseFloat(promptBudget) || 0
   ).toLocaleString('en-IN')} covering: ${promptScope}. Use the create_proposal tool to save it into ProposeIt.`;
@@ -290,6 +304,52 @@ export function McpConnectModal({ isOpen, onClose }: Props) {
                     </button>
                   </div>
                 </div>
+              </div>
+
+              {/* NEW: PROMPT TO CONNECT WITH AI'S MCP */}
+              <div className="p-4 rounded-xl bg-gradient-to-br from-emerald-50 via-white to-slate-50 border border-emerald-200 shadow-xs space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-emerald-950 flex items-center gap-1.5">
+                    <Sparkles className="h-4 w-4 text-emerald-700" />
+                    Prompt Your AI to Connect Automatically
+                  </span>
+                  <span className="text-[10px] font-bold bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full border border-emerald-200">
+                    Recommended
+                  </span>
+                </div>
+                <p className="text-xs text-emerald-800/90 leading-relaxed">
+                  Send this prompt to your AI assistant (Claude Code, Cursor Agent, Windsurf, or Antigravity) to let it configure the MCP connection for you:
+                </p>
+                <div className="relative">
+                  <pre className="p-3 bg-white border border-emerald-200/90 rounded-xl text-xs text-charcoal font-mono leading-relaxed whitespace-pre-wrap select-all">
+                    {aiConnectionPrompt}
+                  </pre>
+                  <button
+                    onClick={() => copyToClipboard(aiConnectionPrompt, 'aiconnprompt')}
+                    className="mt-2.5 w-full sm:w-auto bg-primary hover:bg-primary-hover text-white px-3.5 py-1.5 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 shadow-sm transition-colors"
+                  >
+                    {copiedKey === 'aiconnprompt' ? (
+                      <>
+                        <Check className="h-3.5 w-3.5 text-emerald-300" />
+                        <span>Copied Connection Prompt!</span>
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="h-3.5 w-3.5" />
+                        <span>Copy Connection Prompt for AI</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              {/* Divider */}
+              <div className="relative flex py-1 items-center">
+                <div className="flex-grow border-t border-slate-200"></div>
+                <span className="flex-shrink mx-3 text-[11px] font-bold text-charcoal-muted uppercase tracking-wider">
+                  Or Manual Configuration
+                </span>
+                <div className="flex-grow border-t border-slate-200"></div>
               </div>
 
               {/* CLAUDE DESKTOP CONFIG */}
@@ -541,7 +601,7 @@ export function McpConnectModal({ isOpen, onClose }: Props) {
                       href={`/edit/${simResult.id}`}
                       className="font-bold text-primary inline-flex items-center gap-1 hover:underline text-xs"
                     >
-                      Open in Editor <ArrowRight className="h-3 w-3" />
+                      Open in Editor <ArrowRight className="h-3.5 w-3.5" />
                     </a>
                     <span className="text-slate-300">|</span>
                     <a
@@ -550,7 +610,7 @@ export function McpConnectModal({ isOpen, onClose }: Props) {
                       rel="noreferrer"
                       className="font-bold text-primary inline-flex items-center gap-1 hover:underline text-xs"
                     >
-                      Public Client View <ExternalLink className="h-3 w-3" />
+                      Public Client View <ExternalLink className="h-3.5 w-3.5" />
                     </a>
                   </div>
                 </div>
