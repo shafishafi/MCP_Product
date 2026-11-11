@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link } from '@tanstack/react-router';
-import { getProposals, deleteProposal, resetDemoData, isConfigured } from '../lib/supabase';
+import { getProposals, deleteProposal, resetDemoData, isConfigured, supabase } from '../lib/supabase';
 import { formatCurrency, formatDate } from '../lib/utils';
 import { useUIStore } from '../store/uiStore';
 import { Button } from '../components/ui/button';
@@ -53,6 +53,26 @@ export function DashboardPage() {
     queryKey: ['proposals'],
     queryFn: getProposals,
   });
+
+  // Real-time Supabase Postgres changes subscription
+  useEffect(() => {
+    if (!isConfigured) return;
+
+    const channel = supabase
+      .channel('realtime:dashboard_proposals')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'proposals' },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ['proposals'] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [queryClient]);
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => deleteProposal(id),
