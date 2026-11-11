@@ -10,17 +10,15 @@ import {
   Copy,
   Check,
   X,
-  Sparkles,
   Bot,
   IndianRupee,
   Cpu,
   Layers,
   Code2,
   CheckCircle2,
-  Terminal,
-  FileCode,
   ExternalLink,
-  BookOpen,
+  MessageSquare,
+  Sparkles,
   ArrowRight,
 } from 'lucide-react';
 
@@ -29,36 +27,36 @@ interface Props {
   onClose: () => void;
 }
 
-type GuidePlatform = 'claude-desktop' | 'cursor' | 'claude-code' | 'windsurf' | 'terminal';
+type OS = 'mac' | 'windows';
+type Client = 'claude' | 'cursor' | 'cli';
 
 export function McpConnectModal({ isOpen, onClose }: Props) {
-  const [activeTab, setActiveTab] = useState<'guide' | 'simulate' | 'tools'>('guide');
-  const [guidePlatform, setGuidePlatform] = useState<GuidePlatform>('claude-desktop');
+  const [activeTab, setActiveTab] = useState<'setup' | 'prompts' | 'simulate'>('setup');
+  const [selectedOS, setSelectedOS] = useState<OS>('mac');
+  const [selectedClient, setSelectedClient] = useState<Client>('claude');
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
-  // In-app MCP simulator form state
-  const [clientName, setClientName] = useState('Swiggy Delivery Platform');
-  const [price, setPrice] = useState('180000');
-  const [scopeOfWork, setScopeOfWork] = useState(
-    'Architecture and implementation of live real-time order tracking dashboard, delivery partner route visualization, and mobile UX revamp.'
+  // Custom prompt builder state
+  const [promptClient, setPromptClient] = useState('PhonePe Media');
+  const [promptBudget, setPromptBudget] = useState('250000');
+  const [promptScope, setPromptScope] = useState('Payment analytics dashboard and checkout redesign');
+
+  // Simulator form state
+  const [simClientName, setSimClientName] = useState('Swiggy Delivery Platform');
+  const [simPrice, setSimPrice] = useState('180000');
+  const [simScope, setSimScope] = useState(
+    'Architecture and implementation of live real-time order tracking dashboard with mobile UX revamp.'
   );
-  const [simulatedResponse, setSimulatedResponse] = useState<{
-    id: string;
-    client_name: string;
-    price: number;
-    created_at: string;
-  } | null>(null);
+  const [simResult, setSimResult] = useState<{ id: string; client_name: string; price: number } | null>(null);
 
   const queryClient = useQueryClient();
   const { notifySuccess, notifyError } = useUIStore();
 
-  // Close modal when pressing Escape
+  // Close on Escape key press
   useEffect(() => {
     if (!isOpen) return;
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        onClose();
-      }
+      if (e.key === 'Escape') onClose();
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
@@ -66,29 +64,22 @@ export function McpConnectModal({ isOpen, onClose }: Props) {
 
   const simulateMutation = useMutation({
     mutationFn: async () => {
-      const numPrice = parseFloat(price) || 0;
-      if (!clientName.trim()) {
-        throw new Error('Client name is required');
-      }
+      if (!simClientName.trim()) throw new Error('Client name is required');
       return createProposal({
-        client_name: clientName.trim(),
-        price: numPrice,
+        client_name: simClientName.trim(),
+        price: parseFloat(simPrice) || 0,
         status: 'draft',
-        scope_of_work: scopeOfWork.trim(),
+        scope_of_work: simScope.trim(),
       });
     },
     onSuccess: (newProp) => {
       queryClient.invalidateQueries({ queryKey: ['proposals'] });
-      setSimulatedResponse({
+      setSimResult({
         id: newProp.id,
         client_name: newProp.client_name,
         price: newProp.price,
-        created_at: newProp.created_at,
       });
-      notifySuccess(
-        'MCP Proposal Created!',
-        `"create_proposal" successfully generated proposal for ${newProp.client_name}.`
-      );
+      notifySuccess('Proposal Created via MCP Simulator!', `Saved proposal for ${newProp.client_name}.`);
     },
     onError: (err: Error) => {
       notifyError('MCP Execution Failed', err.message);
@@ -97,15 +88,25 @@ export function McpConnectModal({ isOpen, onClose }: Props) {
 
   if (!isOpen) return null;
 
-  const mcpServerAbsolutePath = '/Users/shafi/prop/mcp-server/dist/index.js';
-  const rootEnvPath = '/Users/shafi/prop/.env';
+  // Paths for Mac & Windows
+  const macServerPath = '/Users/shafi/prop/mcp-server/dist/index.js';
+  const winServerPath = 'C:\\\\Users\\\\YourUsername\\\\prop\\\\mcp-server\\\\dist\\\\index.js';
+  const serverPath = selectedOS === 'mac' ? macServerPath : winServerPath;
+
+  const macConfigPath = '~/Library/Application Support/Claude/claude_desktop_config.json';
+  const winConfigPath = '%APPDATA%\\Claude\\claude_desktop_config.json';
+  const configPath = selectedOS === 'mac' ? macConfigPath : winConfigPath;
+
+  const macOpenCmd = `open ~/Library/Application\\ Support/Claude/claude_desktop_config.json`;
+  const winOpenCmd = `notepad %APPDATA%\\Claude\\claude_desktop_config.json`;
+  const openCmd = selectedOS === 'mac' ? macOpenCmd : winOpenCmd;
 
   const claudeDesktopConfig = JSON.stringify(
     {
       mcpServers: {
         proposeit: {
           command: 'node',
-          args: [mcpServerAbsolutePath],
+          args: [serverPath],
         },
       },
     },
@@ -113,23 +114,13 @@ export function McpConnectModal({ isOpen, onClose }: Props) {
     2
   );
 
-  const claudeCodeCliCmd = `claude mcp add proposeit -- node ${mcpServerAbsolutePath}`;
-  const cursorCommand = `node ${mcpServerAbsolutePath}`;
-  const terminalTestCmd = `cd /Users/shafi/prop/mcp-server && npm run test:create`;
-  const claudeConfigOpenCmd = `open ~/Library/Application\\ Support/Claude/claude_desktop_config.json`;
+  const cursorCommand = `node ${serverPath}`;
+  const claudeCodeCmd = `claude mcp add proposeit -- node ${serverPath}`;
 
-  const windsurfConfig = JSON.stringify(
-    {
-      mcpServers: {
-        proposeit: {
-          command: 'node',
-          args: [mcpServerAbsolutePath],
-        },
-      },
-    },
-    null,
-    2
-  );
+  // Ready-to-use copyable prompt
+  const generatedAiPrompt = `Create a professional project proposal for client "${promptClient}" with an investment of ₹${(
+    parseFloat(promptBudget) || 0
+  ).toLocaleString('en-IN')} covering: ${promptScope}. Use the create_proposal tool to save it into ProposeIt.`;
 
   const copyToClipboard = (text: string, key: string) => {
     try {
@@ -161,23 +152,23 @@ export function McpConnectModal({ isOpen, onClose }: Props) {
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="relative w-full max-w-3xl my-auto rounded-2xl bg-white shadow-popover border border-slate-200 overflow-hidden flex flex-col max-h-[85vh] animate-in zoom-in-95 duration-150"
+        className="relative w-full max-w-2xl my-auto rounded-2xl bg-white shadow-popover border border-slate-200 overflow-hidden flex flex-col max-h-[88vh] animate-in zoom-in-95 duration-150"
       >
-        {/* Modal Header */}
-        <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4 bg-slate-50/80">
+        {/* Header */}
+        <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4 bg-slate-50/70">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-100 text-primary border border-emerald-200/80 shadow-sm">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-100 text-primary border border-emerald-200 shadow-sm">
               <Cpu className="h-5 w-5" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h2 className="text-base font-bold text-charcoal">MCP Integration Hub</h2>
+                <h2 className="text-base font-bold text-charcoal">Connect with MCP</h2>
                 <span className="text-[10px] bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded-full border border-emerald-200">
-                  Stdio Server Ready
+                  Ready
                 </span>
               </div>
-              <p className="text-xs text-charcoal-muted mt-0.5">
-                Connect external AI agents (Claude, Cursor, CLI) or simulate tool calls in real time.
+              <p className="text-xs text-charcoal-muted">
+                Connect external AI agents (Claude, Cursor) or get ready-to-use prompts.
               </p>
             </div>
           </div>
@@ -190,305 +181,219 @@ export function McpConnectModal({ isOpen, onClose }: Props) {
           </button>
         </div>
 
-        {/* Navigation Tabs */}
+        {/* Top Primary Tabs */}
         <div className="flex border-b border-slate-200 px-6 bg-white gap-6">
           <button
-            onClick={() => setActiveTab('guide')}
-            className={`py-3 text-xs font-bold border-b-2 transition-all flex items-center gap-2 ${
-              activeTab === 'guide'
+            onClick={() => setActiveTab('setup')}
+            className={`py-3 text-xs font-bold border-b-2 transition-all flex items-center gap-1.5 ${
+              activeTab === 'setup'
                 ? 'border-primary text-primary'
                 : 'border-transparent text-charcoal-muted hover:text-charcoal'
             }`}
           >
             <Layers className="h-4 w-4" />
-            <span>Connect Your AI Agent</span>
+            <span>1. Connect Agent</span>
           </button>
+
+          <button
+            onClick={() => setActiveTab('prompts')}
+            className={`py-3 text-xs font-bold border-b-2 transition-all flex items-center gap-1.5 ${
+              activeTab === 'prompts'
+                ? 'border-primary text-primary'
+                : 'border-transparent text-charcoal-muted hover:text-charcoal'
+            }`}
+          >
+            <MessageSquare className="h-4 w-4" />
+            <span>2. Prompts for AI</span>
+          </button>
+
           <button
             onClick={() => setActiveTab('simulate')}
-            className={`py-3 text-xs font-bold border-b-2 transition-all flex items-center gap-2 ${
+            className={`py-3 text-xs font-bold border-b-2 transition-all flex items-center gap-1.5 ${
               activeTab === 'simulate'
                 ? 'border-primary text-primary'
                 : 'border-transparent text-charcoal-muted hover:text-charcoal'
             }`}
           >
             <Bot className="h-4 w-4" />
-            <span>In-App Tool Simulator</span>
-          </button>
-          <button
-            onClick={() => setActiveTab('tools')}
-            className={`py-3 text-xs font-bold border-b-2 transition-all flex items-center gap-2 ${
-              activeTab === 'tools'
-                ? 'border-primary text-primary'
-                : 'border-transparent text-charcoal-muted hover:text-charcoal'
-            }`}
-          >
-            <BookOpen className="h-4 w-4" />
-            <span>Tool Reference</span>
+            <span>3. Test Simulator</span>
           </button>
         </div>
 
-        {/* Modal Body */}
+        {/* Body Content */}
         <div className="p-6 overflow-y-auto space-y-5">
-          {/* TAB 1: GUIDE */}
-          {activeTab === 'guide' && (
-            <div className="space-y-5">
-              {/* Common Env Notice */}
-              <div className="p-4 rounded-xl bg-emerald-50/70 border border-emerald-200 text-xs text-charcoal space-y-1.5">
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
-                  <span className="font-bold text-emerald-900 flex items-center gap-1.5">
-                    <Sparkles className="h-4 w-4 text-emerald-700" />
-                    Unified Single Root Environment
-                  </span>
-                  <span className="font-mono text-[11px] bg-white px-2 py-0.5 rounded border border-emerald-200 text-emerald-900 font-semibold select-all">
-                    {rootEnvPath}
-                  </span>
-                </div>
-                <p className="text-emerald-800 leading-relaxed text-[12px]">
-                  Both this web app and the MCP server read directly from the root <code className="bg-white/80 text-emerald-950 font-mono font-bold px-1.5 py-0.5 rounded border border-emerald-200">.env</code> file. No duplicate keys or dual configurations needed!
-                </p>
-                <div className="flex items-center gap-2 pt-1 text-[11px] text-emerald-700">
-                  <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-                  <span>
-                    Current Mode:{' '}
-                    <strong>{isConfigured ? 'Live Supabase DB' : 'Zero-Config Local Demo (No DB Credentials Required)'}</strong>
-                  </span>
-                </div>
-              </div>
-
-              {/* Sub-tabs for AI clients */}
-              <div>
-                <label className="block text-[11px] font-bold uppercase tracking-wider text-charcoal-muted mb-2">
-                  Select Your AI Client / IDE:
-                </label>
-                <div className="grid grid-cols-2 sm:grid-cols-5 gap-1.5 bg-slate-100 p-1.5 rounded-xl">
-                  {(
-                    [
-                      { id: 'claude-desktop', label: 'Claude Desktop' },
-                      { id: 'cursor', label: 'Cursor IDE' },
-                      { id: 'claude-code', label: 'Claude Code CLI' },
-                      { id: 'windsurf', label: 'Windsurf / VS Code' },
-                      { id: 'terminal', label: 'Terminal Test' },
-                    ] as const
-                  ).map((item) => (
+          {/* TAB 1: SETUP (MAC + WINDOWS) */}
+          {activeTab === 'setup' && (
+            <div className="space-y-4">
+              {/* OS & Client Selectors */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-50 p-3 rounded-xl border border-slate-200">
+                {/* Operating System Selector */}
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold text-charcoal">Operating System:</span>
+                  <div className="flex bg-white rounded-lg p-0.5 border border-slate-200">
                     <button
-                      key={item.id}
-                      onClick={() => setGuidePlatform(item.id)}
-                      className={`py-2 px-2 rounded-lg text-xs font-semibold text-center transition-all ${
-                        guidePlatform === item.id
-                          ? 'bg-white text-primary shadow-sm font-bold'
+                      onClick={() => setSelectedOS('mac')}
+                      className={`px-2.5 py-1 text-xs font-semibold rounded-md transition-all ${
+                        selectedOS === 'mac'
+                          ? 'bg-emerald-600 text-white shadow-xs'
                           : 'text-charcoal-muted hover:text-charcoal'
                       }`}
                     >
-                      {item.label}
+                      macOS
                     </button>
-                  ))}
+                    <button
+                      onClick={() => setSelectedOS('windows')}
+                      className={`px-2.5 py-1 text-xs font-semibold rounded-md transition-all ${
+                        selectedOS === 'windows'
+                          ? 'bg-emerald-600 text-white shadow-xs'
+                          : 'text-charcoal-muted hover:text-charcoal'
+                      }`}
+                    >
+                      Windows
+                    </button>
+                  </div>
+                </div>
+
+                {/* AI Client Selector */}
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold text-charcoal">App:</span>
+                  <div className="flex bg-white rounded-lg p-0.5 border border-slate-200">
+                    <button
+                      onClick={() => setSelectedClient('claude')}
+                      className={`px-2.5 py-1 text-xs font-semibold rounded-md transition-all ${
+                        selectedClient === 'claude'
+                          ? 'bg-primary text-white shadow-xs'
+                          : 'text-charcoal-muted hover:text-charcoal'
+                      }`}
+                    >
+                      Claude Desktop
+                    </button>
+                    <button
+                      onClick={() => setSelectedClient('cursor')}
+                      className={`px-2.5 py-1 text-xs font-semibold rounded-md transition-all ${
+                        selectedClient === 'cursor'
+                          ? 'bg-primary text-white shadow-xs'
+                          : 'text-charcoal-muted hover:text-charcoal'
+                      }`}
+                    >
+                      Cursor
+                    </button>
+                    <button
+                      onClick={() => setSelectedClient('cli')}
+                      className={`px-2.5 py-1 text-xs font-semibold rounded-md transition-all ${
+                        selectedClient === 'cli'
+                          ? 'bg-primary text-white shadow-xs'
+                          : 'text-charcoal-muted hover:text-charcoal'
+                      }`}
+                    >
+                      CLI
+                    </button>
+                  </div>
                 </div>
               </div>
 
-              {/* CLAUDE DESKTOP GUIDE */}
-              {guidePlatform === 'claude-desktop' && (
-                <div className="space-y-4 rounded-xl border border-slate-200 p-4 bg-slate-50/50">
-                  <div className="space-y-1">
-                    <h4 className="text-xs font-bold text-charcoal flex items-center gap-2">
-                      <FileCode className="h-4 w-4 text-primary" />
-                      Step 1: Open Claude Desktop Configuration
-                    </h4>
-                    <p className="text-xs text-charcoal-muted leading-relaxed">
-                      On macOS, open or create your Claude Desktop config JSON at:
-                    </p>
-                    <div className="relative mt-1">
-                      <code className="text-[11px] font-mono bg-white text-charcoal p-2 rounded-lg border border-slate-200 block select-all">
-                        ~/Library/Application Support/Claude/claude_desktop_config.json
-                      </code>
+              {/* CLAUDE DESKTOP CONFIG */}
+              {selectedClient === 'claude' && (
+                <div className="space-y-4">
+                  {/* Step 1 */}
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-xs font-bold text-charcoal">
+                        Step 1: Open Claude Configuration File ({selectedOS === 'mac' ? 'macOS' : 'Windows'})
+                      </span>
                       <button
-                        onClick={() => copyToClipboard(claudeConfigOpenCmd, 'open-claude')}
-                        className="absolute top-1.5 right-1.5 bg-slate-100 hover:bg-slate-200 text-charcoal text-[10px] font-medium rounded px-2 py-1 flex items-center gap-1 transition-colors border border-slate-200"
-                        title="Copy terminal command to open file"
+                        onClick={() => copyToClipboard(openCmd, 'opencmd')}
+                        className="text-[11px] text-primary hover:underline font-semibold flex items-center gap-1"
                       >
-                        {copiedKey === 'open-claude' ? (
-                          <Check className="h-3 w-3 text-emerald-600" />
-                        ) : (
-                          <Copy className="h-3 w-3" />
-                        )}
-                        <span>Copy Open Command</span>
+                        {copiedKey === 'opencmd' ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
+                        Copy Open Command
                       </button>
                     </div>
+                    <code className="text-[11px] font-mono bg-slate-100 text-charcoal px-2.5 py-1.5 rounded-lg border border-slate-200 block select-all">
+                      {configPath}
+                    </code>
                   </div>
 
-                  <div className="space-y-1">
-                    <h4 className="text-xs font-bold text-charcoal flex items-center gap-2">
-                      <Code2 className="h-4 w-4 text-primary" />
-                      Step 2: Add ProposeIt MCP Server
-                    </h4>
-                    <p className="text-xs text-charcoal-muted">
-                      Paste the following block into your <code className="font-mono text-charcoal font-semibold">"mcpServers"</code> configuration:
-                    </p>
-                    <div className="relative mt-1">
-                      <pre className="p-3.5 rounded-xl bg-slate-900 text-emerald-300 font-mono text-[11px] overflow-x-auto leading-relaxed">
-                        {claudeDesktopConfig}
-                      </pre>
+                  {/* Step 2 */}
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-xs font-bold text-charcoal">
+                        Step 2: Add to <span className="font-mono text-emerald-800">"mcpServers"</span>
+                      </span>
                       <button
-                        onClick={() => copyToClipboard(claudeDesktopConfig, 'claude-desktop')}
-                        className="absolute top-2.5 right-2.5 bg-slate-800 hover:bg-slate-700 text-white rounded-lg px-2.5 py-1 text-xs font-medium flex items-center gap-1.5 transition-colors border border-slate-700 shadow-sm"
+                        onClick={() => copyToClipboard(claudeDesktopConfig, 'claudeserver')}
+                        className="text-[11px] bg-primary text-white px-2 py-0.5 rounded font-semibold flex items-center gap-1 hover:bg-primary-hover shadow-xs"
                       >
-                        {copiedKey === 'claude-desktop' ? (
+                        {copiedKey === 'claudeserver' ? (
                           <>
-                            <Check className="h-3 w-3 text-emerald-400" />
-                            <span>Copied</span>
+                            <Check className="h-3 w-3" /> Copied
                           </>
                         ) : (
                           <>
-                            <Copy className="h-3 w-3" />
-                            <span>Copy JSON</span>
+                            <Copy className="h-3 w-3" /> Copy JSON
                           </>
                         )}
                       </button>
                     </div>
+                    <pre className="p-3.5 rounded-xl bg-slate-900 text-emerald-300 font-mono text-[11px] overflow-x-auto leading-relaxed">
+                      {claudeDesktopConfig}
+                    </pre>
                   </div>
 
-                  <div className="text-xs text-charcoal-muted pt-1 leading-relaxed border-t border-slate-200">
-                    <strong>Step 3:</strong> Restart Claude Desktop. The hammer icon 🔨 will appear in Claude with <code className="font-mono text-primary font-bold">create_proposal</code>, <code className="font-mono text-primary font-bold">list_proposals</code>, and <code className="font-mono text-primary font-bold">get_proposal</code> available!
-                  </div>
+                  <p className="text-xs text-charcoal-muted">
+                    <strong>Step 3:</strong> Restart Claude Desktop. The hammer icon 🔨 will appear with tool{' '}
+                    <code className="font-mono text-primary font-bold">create_proposal</code> enabled!
+                  </p>
                 </div>
               )}
 
-              {/* CURSOR GUIDE */}
-              {guidePlatform === 'cursor' && (
-                <div className="space-y-4 rounded-xl border border-slate-200 p-4 bg-slate-50/50">
-                  <div className="space-y-1 text-xs text-charcoal-muted leading-relaxed">
-                    <h4 className="font-bold text-charcoal">Step 1: Open Cursor Settings</h4>
-                    <p>Press <kbd className="font-mono bg-white border border-slate-200 px-1.5 py-0.5 rounded text-[11px] text-charcoal">Cmd + ,</kbd> → navigate to <strong>Features</strong> → <strong>MCP</strong>.</p>
+              {/* CURSOR IDE CONFIG */}
+              {selectedClient === 'cursor' && (
+                <div className="space-y-3">
+                  <div className="text-xs text-charcoal-muted leading-relaxed">
+                    <strong>Step 1:</strong> In Cursor, open Settings (
+                    <kbd className="font-mono bg-slate-100 px-1 rounded">{selectedOS === 'mac' ? 'Cmd + ,' : 'Ctrl + ,'}</kbd>
+                    ) → go to <strong>Features</strong> → <strong>MCP</strong>.
                   </div>
-
-                  <div className="space-y-1 text-xs text-charcoal-muted leading-relaxed">
-                    <h4 className="font-bold text-charcoal">Step 2: Add New MCP Server</h4>
-                    <ul className="list-disc list-inside space-y-1">
-                      <li>Name: <code className="font-mono bg-white px-1.5 py-0.5 rounded border border-slate-200 text-charcoal font-semibold">proposeit</code></li>
-                      <li>Type: <code className="font-mono bg-white px-1.5 py-0.5 rounded border border-slate-200 text-charcoal font-semibold">command</code></li>
+                  <div className="text-xs text-charcoal-muted leading-relaxed">
+                    <strong>Step 2:</strong> Click <strong>+ Add New MCP Server</strong>:
+                    <ul className="list-disc list-inside mt-1 space-y-0.5">
+                      <li>Name: <code className="font-mono bg-slate-100 px-1 rounded">proposeit</code></li>
+                      <li>Type: <code className="font-mono bg-slate-100 px-1 rounded">command</code></li>
                       <li>Command:</li>
                     </ul>
                   </div>
-
                   <div className="relative">
                     <pre className="p-3.5 rounded-xl bg-slate-900 text-emerald-300 font-mono text-[11px] overflow-x-auto select-all">
                       {cursorCommand}
                     </pre>
                     <button
-                      onClick={() => copyToClipboard(cursorCommand, 'cursor')}
-                      className="absolute top-2.5 right-2.5 bg-slate-800 hover:bg-slate-700 text-white rounded-lg px-2.5 py-1 text-xs font-medium flex items-center gap-1.5 transition-colors border border-slate-700 shadow-sm"
+                      onClick={() => copyToClipboard(cursorCommand, 'cursorcmd')}
+                      className="absolute top-2.5 right-2.5 bg-slate-800 hover:bg-slate-700 text-white rounded-lg px-2.5 py-1 text-xs font-medium flex items-center gap-1 border border-slate-700 shadow-sm"
                     >
-                      {copiedKey === 'cursor' ? (
-                        <>
-                          <Check className="h-3 w-3 text-emerald-400" />
-                          <span>Copied</span>
-                        </>
-                      ) : (
-                        <>
-                          <Copy className="h-3 w-3" />
-                          <span>Copy Command</span>
-                        </>
-                      )}
+                      {copiedKey === 'cursorcmd' ? <Check className="h-3 w-3 text-emerald-400" /> : <Copy className="h-3 w-3" />}
+                      <span>Copy Command</span>
                     </button>
                   </div>
                 </div>
               )}
 
-              {/* CLAUDE CODE CLI GUIDE */}
-              {guidePlatform === 'claude-code' && (
-                <div className="space-y-4 rounded-xl border border-slate-200 p-4 bg-slate-50/50">
-                  <div className="space-y-1">
-                    <h4 className="text-xs font-bold text-charcoal flex items-center gap-2">
-                      <Terminal className="h-4 w-4 text-primary" />
-                      Add to Claude Code CLI in 1 Step
-                    </h4>
-                    <p className="text-xs text-charcoal-muted leading-relaxed">
-                      Run this single command in your terminal to instantly register the ProposeIt MCP server in Claude Code:
-                    </p>
+              {/* CLI (CLAUDE CODE) */}
+              {selectedClient === 'cli' && (
+                <div className="space-y-3">
+                  <div className="text-xs text-charcoal-muted leading-relaxed">
+                    Register the MCP server in Claude Code CLI with a single command:
                   </div>
-
                   <div className="relative">
                     <pre className="p-3.5 rounded-xl bg-slate-900 text-emerald-300 font-mono text-[11px] overflow-x-auto select-all">
-                      {claudeCodeCliCmd}
+                      {claudeCodeCmd}
                     </pre>
                     <button
-                      onClick={() => copyToClipboard(claudeCodeCliCmd, 'claude-code')}
-                      className="absolute top-2.5 right-2.5 bg-slate-800 hover:bg-slate-700 text-white rounded-lg px-2.5 py-1 text-xs font-medium flex items-center gap-1.5 transition-colors border border-slate-700 shadow-sm"
+                      onClick={() => copyToClipboard(claudeCodeCmd, 'clicmd')}
+                      className="absolute top-2.5 right-2.5 bg-slate-800 hover:bg-slate-700 text-white rounded-lg px-2.5 py-1 text-xs font-medium flex items-center gap-1 border border-slate-700 shadow-sm"
                     >
-                      {copiedKey === 'claude-code' ? (
-                        <>
-                          <Check className="h-3 w-3 text-emerald-400" />
-                          <span>Copied</span>
-                        </>
-                      ) : (
-                        <>
-                          <Copy className="h-3 w-3" />
-                          <span>Copy Command</span>
-                        </>
-                      )}
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {/* WINDSURF / VS CODE GUIDE */}
-              {guidePlatform === 'windsurf' && (
-                <div className="space-y-4 rounded-xl border border-slate-200 p-4 bg-slate-50/50">
-                  <div className="space-y-1 text-xs text-charcoal-muted leading-relaxed">
-                    <h4 className="font-bold text-charcoal">Windsurf / Roo Code / Cline MCP Config</h4>
-                    <p>Add this entry to your client's <code className="font-mono bg-white border border-slate-200 px-1 rounded text-charcoal">mcp_config.json</code>:</p>
-                  </div>
-
-                  <div className="relative">
-                    <pre className="p-3.5 rounded-xl bg-slate-900 text-emerald-300 font-mono text-[11px] overflow-x-auto leading-relaxed">
-                      {windsurfConfig}
-                    </pre>
-                    <button
-                      onClick={() => copyToClipboard(windsurfConfig, 'windsurf')}
-                      className="absolute top-2.5 right-2.5 bg-slate-800 hover:bg-slate-700 text-white rounded-lg px-2.5 py-1 text-xs font-medium flex items-center gap-1.5 transition-colors border border-slate-700 shadow-sm"
-                    >
-                      {copiedKey === 'windsurf' ? (
-                        <>
-                          <Check className="h-3 w-3 text-emerald-400" />
-                          <span>Copied</span>
-                        </>
-                      ) : (
-                        <>
-                          <Copy className="h-3 w-3" />
-                          <span>Copy JSON</span>
-                        </>
-                      )}
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {/* TERMINAL TEST RUNNER */}
-              {guidePlatform === 'terminal' && (
-                <div className="space-y-4 rounded-xl border border-slate-200 p-4 bg-slate-50/50">
-                  <div className="space-y-1 text-xs text-charcoal-muted leading-relaxed">
-                    <h4 className="font-bold text-charcoal">Direct Terminal Test Runner</h4>
-                    <p>Run the built-in MCP verification script to test tool execution and proposal generation directly:</p>
-                  </div>
-
-                  <div className="relative">
-                    <pre className="p-3.5 rounded-xl bg-slate-900 text-emerald-300 font-mono text-[11px] overflow-x-auto select-all">
-                      {terminalTestCmd}
-                    </pre>
-                    <button
-                      onClick={() => copyToClipboard(terminalTestCmd, 'terminal')}
-                      className="absolute top-2.5 right-2.5 bg-slate-800 hover:bg-slate-700 text-white rounded-lg px-2.5 py-1 text-xs font-medium flex items-center gap-1.5 transition-colors border border-slate-700 shadow-sm"
-                    >
-                      {copiedKey === 'terminal' ? (
-                        <>
-                          <Check className="h-3 w-3 text-emerald-400" />
-                          <span>Copied</span>
-                        </>
-                      ) : (
-                        <>
-                          <Copy className="h-3 w-3" />
-                          <span>Copy Command</span>
-                        </>
-                      )}
+                      {copiedKey === 'clicmd' ? <Check className="h-3 w-3 text-emerald-400" /> : <Copy className="h-3 w-3" />}
+                      <span>Copy Command</span>
                     </button>
                   </div>
                 </div>
@@ -496,45 +401,156 @@ export function McpConnectModal({ isOpen, onClose }: Props) {
             </div>
           )}
 
-          {/* TAB 2: IN-APP TOOL SIMULATOR */}
-          {activeTab === 'simulate' && (
+          {/* TAB 2: PROMPTS SECTION */}
+          {activeTab === 'prompts' && (
             <div className="space-y-4">
-              <div className="p-3.5 rounded-xl bg-emerald-50/80 border border-emerald-200 text-xs text-emerald-900 leading-relaxed flex items-center justify-between">
+              <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-900 leading-relaxed flex items-center gap-2">
+                <Sparkles className="h-4 w-4 text-emerald-700 flex-shrink-0" />
+                <span>
+                  Once your MCP server is connected, copy and paste these prompts into Claude or Cursor to automatically create proposals!
+                </span>
+              </div>
+
+              {/* Dynamic Prompt Builder */}
+              <div className="border border-slate-200 rounded-xl p-4 bg-slate-50/50 space-y-3">
+                <span className="text-xs font-bold text-charcoal uppercase tracking-wider">
+                  Interactive Proposal Prompt Generator
+                </span>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[11px] font-semibold text-charcoal-muted mb-1">
+                      Client Name
+                    </label>
+                    <Input
+                      value={promptClient}
+                      onChange={(e) => setPromptClient(e.target.value)}
+                      placeholder="e.g. PhonePe"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-semibold text-charcoal-muted mb-1 flex items-center gap-1">
+                      <IndianRupee className="h-3 w-3 text-slate-400" />
+                      Budget in INR (₹)
+                    </label>
+                    <Input
+                      type="number"
+                      value={promptBudget}
+                      onChange={(e) => setPromptBudget(e.target.value)}
+                      placeholder="250000"
+                    />
+                  </div>
+                </div>
+
                 <div>
-                  <strong>Live In-App Simulation:</strong> Emulate what happens when an external AI assistant invokes the <code className="font-mono font-bold">create_proposal</code> MCP tool right here in your browser.
+                  <label className="block text-[11px] font-semibold text-charcoal-muted mb-1">
+                    Project Scope / Deliverables
+                  </label>
+                  <Input
+                    value={promptScope}
+                    onChange={(e) => setPromptScope(e.target.value)}
+                    placeholder="e.g. Payment analytics dashboard and checkout redesign"
+                  />
+                </div>
+
+                {/* Output Prompt */}
+                <div className="relative mt-2">
+                  <div className="p-3 bg-white border border-slate-200 rounded-xl text-xs text-charcoal leading-relaxed font-medium">
+                    "{generatedAiPrompt}"
+                  </div>
+                  <button
+                    onClick={() => copyToClipboard(generatedAiPrompt, 'genprompt')}
+                    className="mt-2 w-full sm:w-auto bg-primary hover:bg-primary-hover text-white px-3 py-1.5 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 shadow-sm transition-colors"
+                  >
+                    {copiedKey === 'genprompt' ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+                    <span>Copy Prompt for Claude / Cursor</span>
+                  </button>
                 </div>
               </div>
 
-              {simulatedResponse && (
-                <div className="p-4 rounded-xl bg-emerald-100/70 border border-emerald-300 text-xs text-emerald-900 space-y-2">
+              {/* Ready-to-use Preset Prompts */}
+              <div className="space-y-2">
+                <span className="text-xs font-bold text-charcoal uppercase tracking-wider block">
+                  Quick Preset Prompts
+                </span>
+
+                <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs flex items-center justify-between gap-3">
+                  <div>
+                    <p className="font-semibold text-charcoal">Quick Website Redesign Proposal</p>
+                    <p className="text-[11px] text-charcoal-muted">Creates a ₹1,50,000 Next.js landing page proposal</p>
+                  </div>
+                  <button
+                    onClick={() =>
+                      copyToClipboard(
+                        'Create a proposal for "Acme Global" with price 150000 INR for responsive landing page redesign in Tailwind CSS with micro-interactions, using the create_proposal tool.',
+                        'preset1'
+                      )
+                    }
+                    className="text-xs font-bold text-primary hover:underline flex items-center gap-1 flex-shrink-0"
+                  >
+                    {copiedKey === 'preset1' ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
+                    Copy Prompt
+                  </button>
+                </div>
+
+                <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs flex items-center justify-between gap-3">
+                  <div>
+                    <p className="font-semibold text-charcoal">List Existing Proposals</p>
+                    <p className="text-[11px] text-charcoal-muted">Ask your AI to view existing proposals in the system</p>
+                  </div>
+                  <button
+                    onClick={() =>
+                      copyToClipboard(
+                        'List my recent proposals in ProposeIt using the list_proposals tool.',
+                        'preset2'
+                      )
+                    }
+                    className="text-xs font-bold text-primary hover:underline flex items-center gap-1 flex-shrink-0"
+                  >
+                    {copiedKey === 'preset2' ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
+                    Copy Prompt
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* TAB 3: TEST SIMULATOR */}
+          {activeTab === 'simulate' && (
+            <div className="space-y-4">
+              <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs text-charcoal-muted leading-relaxed">
+                Test creating a proposal right now without opening an external AI client.
+              </div>
+
+              {simResult && (
+                <div className="p-3.5 rounded-xl bg-emerald-100/70 border border-emerald-300 text-xs text-emerald-900 space-y-1">
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <CheckCircle2 className="h-4 w-4 text-emerald-700 flex-shrink-0" />
-                      <span className="font-bold">MCP Tool Execution Succeeded!</span>
-                    </div>
+                    <span className="font-bold flex items-center gap-1.5">
+                      <CheckCircle2 className="h-4 w-4 text-emerald-700" />
+                      Proposal Created Successfully!
+                    </span>
                     <span className="font-mono text-[11px] bg-white px-2 py-0.5 rounded border border-emerald-300 font-semibold">
-                      ID: {simulatedResponse.id}
+                      ID: {simResult.id}
                     </span>
                   </div>
-                  <p className="text-emerald-800 text-[11px]">
-                    Created proposal for <strong>{simulatedResponse.client_name}</strong> priced at{' '}
-                    <strong>₹{simulatedResponse.price.toLocaleString('en-IN')}</strong>. It is now live in your pipeline!
+                  <p className="text-[11px] text-emerald-800">
+                    Client: <strong>{simResult.client_name}</strong> | Price: <strong>₹{simResult.price.toLocaleString('en-IN')}</strong>
                   </p>
                   <div className="flex items-center gap-3 pt-1">
                     <a
-                      href={`/edit/${simulatedResponse.id}`}
+                      href={`/edit/${simResult.id}`}
                       className="font-bold text-primary inline-flex items-center gap-1 hover:underline text-xs"
                     >
-                      Open in Editor <ArrowRight className="h-3.5 w-3.5" />
+                      Open in Editor <ArrowRight className="h-3 w-3" />
                     </a>
                     <span className="text-slate-300">|</span>
                     <a
-                      href={`/p/${simulatedResponse.id}`}
+                      href={`/p/${simResult.id}`}
                       target="_blank"
                       rel="noreferrer"
                       className="font-bold text-primary inline-flex items-center gap-1 hover:underline text-xs"
                     >
-                      Public Client View <ExternalLink className="h-3.5 w-3.5" />
+                      Public Client View <ExternalLink className="h-3 w-3" />
                     </a>
                   </div>
                 </div>
@@ -542,11 +558,11 @@ export function McpConnectModal({ isOpen, onClose }: Props) {
 
               <div>
                 <label className="block text-xs font-semibold text-charcoal-muted uppercase tracking-wider mb-1">
-                  Client Name (parameter: clientName)
+                  Client Name
                 </label>
                 <Input
-                  value={clientName}
-                  onChange={(e) => setClientName(e.target.value)}
+                  value={simClientName}
+                  onChange={(e) => setSimClientName(e.target.value)}
                   placeholder="e.g. Swiggy Delivery Platform"
                 />
               </div>
@@ -554,32 +570,32 @@ export function McpConnectModal({ isOpen, onClose }: Props) {
               <div>
                 <label className="block text-xs font-semibold text-charcoal-muted uppercase tracking-wider mb-1 flex items-center gap-1">
                   <IndianRupee className="h-3.5 w-3.5 text-slate-400" />
-                  Proposed Price in INR (parameter: price)
+                  Proposed Price (₹ INR)
                 </label>
                 <Input
                   type="number"
-                  value={price}
-                  onChange={(e) => setPrice(e.target.value)}
+                  value={simPrice}
+                  onChange={(e) => setSimPrice(e.target.value)}
                   placeholder="180000"
                 />
               </div>
 
               <div>
                 <label className="block text-xs font-semibold text-charcoal-muted uppercase tracking-wider mb-1">
-                  Scope of Work (parameter: scopeOfWork)
+                  Scope of Work
                 </label>
                 <Textarea
                   rows={3}
-                  value={scopeOfWork}
-                  onChange={(e) => setScopeOfWork(e.target.value)}
+                  value={simScope}
+                  onChange={(e) => setSimScope(e.target.value)}
                   placeholder="Deliverables and milestones..."
                 />
               </div>
 
               {/* JSON-RPC Preview */}
-              <div className="p-3.5 bg-slate-900 text-emerald-300 font-mono text-[11px] rounded-xl overflow-x-auto">
+              <div className="p-3 bg-slate-900 text-emerald-300 font-mono text-[11px] rounded-xl overflow-x-auto">
                 <div className="text-slate-400 text-[10px] uppercase font-bold mb-1 flex items-center gap-1">
-                  <Code2 className="h-3 w-3" /> JSON-RPC 2.0 Payload Preview
+                  <Code2 className="h-3 w-3" /> JSON-RPC Preview
                 </div>
                 {JSON.stringify(
                   {
@@ -588,9 +604,9 @@ export function McpConnectModal({ isOpen, onClose }: Props) {
                     params: {
                       name: 'create_proposal',
                       arguments: {
-                        clientName: clientName.trim() || '...',
-                        price: parseFloat(price) || 0,
-                        scopeOfWork: scopeOfWork.trim() || '...',
+                        clientName: simClientName.trim() || '...',
+                        price: parseFloat(simPrice) || 0,
+                        scopeOfWork: simScope.trim() || '...',
                       },
                     },
                   },
@@ -610,81 +626,14 @@ export function McpConnectModal({ isOpen, onClose }: Props) {
                   className="gap-2 shadow-sm font-semibold"
                 >
                   <Bot className="h-4 w-4" />
-                  <span>
-                    {simulateMutation.isPending
-                      ? 'Executing MCP Tool...'
-                      : 'Execute Tool Call'}
-                  </span>
+                  <span>{simulateMutation.isPending ? 'Executing...' : 'Execute Tool Call'}</span>
                 </Button>
-              </div>
-            </div>
-          )}
-
-          {/* TAB 3: TOOLS & SCHEMA REFERENCE */}
-          {activeTab === 'tools' && (
-            <div className="space-y-4">
-              <div className="text-xs text-charcoal-muted leading-relaxed">
-                The ProposeIt MCP server registers 3 tools compliant with the Model Context Protocol specification:
-              </div>
-
-              {/* Tool 1 */}
-              <div className="p-4 rounded-xl border border-slate-200 bg-slate-50/60 space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="font-mono text-xs font-bold text-primary bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
-                    create_proposal
-                  </span>
-                  <span className="text-[10px] bg-slate-200 text-slate-700 px-2 py-0.5 rounded font-medium">
-                    Primary Tool
-                  </span>
-                </div>
-                <p className="text-xs text-charcoal leading-relaxed">
-                  Creates a new client proposal in the ProposeIt pipeline with full pricing and scope breakdown.
-                </p>
-                <div className="text-[11px] font-mono bg-white p-2.5 rounded border border-slate-200 text-slate-700">
-                  parameters: &#123; clientName: string, scopeOfWork: string, price: number (in INR) &#125;
-                </div>
-              </div>
-
-              {/* Tool 2 */}
-              <div className="p-4 rounded-xl border border-slate-200 bg-slate-50/60 space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="font-mono text-xs font-bold text-primary bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
-                    list_proposals
-                  </span>
-                  <span className="text-[10px] bg-slate-200 text-slate-700 px-2 py-0.5 rounded font-medium">
-                    Query Tool
-                  </span>
-                </div>
-                <p className="text-xs text-charcoal leading-relaxed">
-                  Lists existing proposals in the system, optionally filtered by status ('all', 'draft', 'sent', 'approved').
-                </p>
-                <div className="text-[11px] font-mono bg-white p-2.5 rounded border border-slate-200 text-slate-700">
-                  parameters: &#123; status?: string, limit?: number &#125;
-                </div>
-              </div>
-
-              {/* Tool 3 */}
-              <div className="p-4 rounded-xl border border-slate-200 bg-slate-50/60 space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="font-mono text-xs font-bold text-primary bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
-                    get_proposal
-                  </span>
-                  <span className="text-[10px] bg-slate-200 text-slate-700 px-2 py-0.5 rounded font-medium">
-                    Query Tool
-                  </span>
-                </div>
-                <p className="text-xs text-charcoal leading-relaxed">
-                  Retrieves full proposal details by its unique identifier (ID).
-                </p>
-                <div className="text-[11px] font-mono bg-white p-2.5 rounded border border-slate-200 text-slate-700">
-                  parameters: &#123; id: string &#125;
-                </div>
               </div>
             </div>
           )}
         </div>
 
-        {/* Modal Footer */}
+        {/* Footer */}
         <div className="border-t border-slate-100 px-6 py-3 bg-slate-50 flex items-center justify-between text-xs text-charcoal-muted">
           <div className="flex items-center gap-2">
             <span
@@ -693,7 +642,7 @@ export function McpConnectModal({ isOpen, onClose }: Props) {
               }`}
             />
             <span className="font-medium text-charcoal">
-              Storage Mode: {isConfigured ? 'Supabase Live' : 'Zero-Config Local Pipeline (Active)'}
+              Storage: {isConfigured ? 'Supabase Live' : 'Zero-Config Local Mode'}
             </span>
           </div>
           <Button variant="ghost" size="sm" onClick={onClose} className="text-xs h-7">
