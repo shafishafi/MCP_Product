@@ -1,11 +1,51 @@
 [
   {
-    "id": "prop-mcp-mwck61m1",
+    "id": "prop-mcp-mwcqr6kg",
     "client_name": "Razorpay Financial Technologies",
     "scope_of_work": "Enterprise payment orchestration gateway with multi-currency routing, instant refund webhooks, and automated fraud detection pipeline.",
     "price": 350000,
     "status": "draft",
-    "created_at": "2026-11-11T20:15:13.321Z"
+    "created_at": "2026-11-11T23:19:37.216Z"
+  },
+  {
+    "id": "prop-mcp-mwcqr6kg",
+    "client_name": "Razorpay Financial Technologies",
+    "scope_of_work": "Enterprise payment orchestration gateway with multi-currency routing, instant refund webhooks, and automated fraud detection pipeline.",
+    "price": 350000,
+    "status": "draft",
+    "created_at": "2026-11-11T23:19:37.216Z"
+  },
+  {
+    "id": "prop-mcp-mwcq8obf",
+    "client_name": "Smith Plumbing",
+    "scope_of_work": "1. Comprehensive 5-Page Responsive Website:\n- Homepage: High-converting hero section with 24/7 emergency dispatch hotline, instant quote request modal, customer review ratings, and trust badges (Licensed, Bonded & Insured).\n- Services Page: Full showcase of Residential & Commercial Plumbing, Emergency Repairs, Drain Cleaning, Water Heater Replacement, and Sewer Line Inspections.\n- About Us: Company history, certified master plumber bios, service guarantee, and safety accreditations.\n- Emergency Services: Dedicated urgent dispatch portal featuring one-tap click-to-call, estimated response time guarantees, and transparent pricing.\n- Contact & Online Scheduling: Interactive appointment booking calendar, service radius map, Google Maps integration, and automated lead notifications.\n\n2. Performance, Conversion & Local SEO Optimization:\n- Mobile-first responsive UI built for urgent mobile callers (sticky call bar & click-to-call CTAs).\n- Complete Local SEO setup with Plumber LocalBusiness schema markup and Google Business Profile optimization.\n- Sub-second load speeds and WCAG AA accessibility compliance.\n- Secure SSL integration, anti-spam form protections, and webhook notifications.\n\n3. Timeline & Phased Milestones:\n- Week 1: Wireframing, information architecture & copy drafting.\n- Week 2: High-fidelity visual mockups & prototype approval.\n- Week 3: Development, booking form integration & local SEO setup.\n- Week 4: Multi-device QA audit, production deployment, and client handover.",
+    "price": 150000,
+    "status": "draft",
+    "created_at": "2026-11-11T23:05:13.755Z"
+  },
+  {
+    "id": "prop-mcp-mwcpiz4o",
+    "client_name": "Smith Plumbing",
+    "scope_of_work": "1. Comprehensive 5-Page Responsive Website:\n- Homepage: High-converting hero section, 24/7 emergency hotline banner, instant quote trigger, trust badges, and social proof.\n- Services: Detailed breakdown of Residential & Commercial Plumbing, Drain Cleaning, Water Heaters, Leak Detection, and Pipe Repair.\n- About Us: Certified technician bios, licensing/insurance credentials, company background, and satisfaction guarantee.\n- Emergency Plumbing: Dedicated urgent dispatch portal with one-tap calling, response time expectations, and transparent pricing.\n- Contact & Online Booking: Interactive service scheduling form, service area coverage map, and automated email/SMS lead alerts.\n\n2. Technical Features & Optimization:\n- Mobile-first responsive UI engineered for urgent mobile callers (click-to-call CTAs).\n- Local SEO optimization: Plumber LocalBusiness schema markup, localized meta tags, and Google Business Profile integration.\n- Fast page performance (< 1s load time) and WCAG AA accessibility compliance.\n- Analytics setup, contact form spam protection, and SSL encryption.\n\n3. Milestones & Delivery:\n- Week 1: Wireframing, information architecture & copy review.\n- Week 2: High-fidelity design mockups & client sign-off.\n- Week 3: Development, form integrations, and local SEO configuration.\n- Week 4: QA testing, cross-browser audit, deployment to production & staff training.",
+    "price": 150000,
+    "status": "draft",
+    "created_at": "2026-11-11T22:45:14.712Z"
+  },
+  {
+    "id": "prop-mcp-mwcoc614",
+    "client_name": "Razorpay Financial Technologies",
+    "scope_of_work": "Enterprise payment orchestration gateway with multi-currency routing, instant refund webhooks, and automated fraud detection pipeline.",
+    "price": 350000,
+    "status": "draft",
+    "created_at": "2026-11-11T22:11:57.448Z"
+  },
+  {
+    "id": "prop-mcp-mwco6iew",
+    "client_name": "Razorpay Financial Technologies",
+    "scope_of_work": "Enterprise payment orchestration gateway with multi-currency routing, instant refund webhooks, and automated fraud detection pipeline.",
+    "price": 350000,
+    "status": "draft",
+    "created_at": "2026-11-11T22:07:33.560Z"
   },
   {
     "id": "prop-mcp-mwck61m1",

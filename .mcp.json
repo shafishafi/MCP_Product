@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "proposeit": {
+      "command": "node",
+      "args": [
+        "/Users/shafi/prop/mcp-server/dist/index.js"
+      ],
+      "env": {
+        "APP_URL": "https://proposeit.netlify.app"
+      }
+    }
+  }
+}
+

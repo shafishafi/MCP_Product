@@ -36,6 +36,8 @@ export function PublicViewPage() {
     queryKey: ['proposal', proposalId],
     queryFn: () => getProposalById(proposalId),
     enabled: Boolean(proposalId),
+    retry: 2,
+    refetchOnWindowFocus: true,
   });
 
   const approveMutation = useMutation({
