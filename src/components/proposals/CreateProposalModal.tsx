@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { createProposal } from '../../lib/supabase';
 import { ProposalStatus } from '../../types/proposal';
@@ -74,9 +75,9 @@ export function CreateProposalModal({ isOpen, onClose }: Props) {
     });
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-      <div className="relative w-full max-w-xl rounded-2xl bg-white shadow-popover border border-slate-200 overflow-hidden">
+  return createPortal(
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4 animate-in fade-in duration-200 overflow-y-auto">
+      <div className="relative w-full max-w-xl my-auto rounded-2xl bg-white shadow-popover border border-slate-200 overflow-hidden">
         {/* Modal Header */}
         <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4">
           <div className="flex items-center gap-2.5">
@@ -177,6 +178,7 @@ export function CreateProposalModal({ isOpen, onClose }: Props) {
           </div>
         </form>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
