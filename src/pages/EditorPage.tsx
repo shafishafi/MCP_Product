@@ -31,6 +31,7 @@ export function EditorPage() {
   const queryClient = useQueryClient();
   const { notifySuccess, notifyError } = useUIStore();
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+  const [scopeTab, setScopeTab] = useState<'write' | 'preview'>('write');
 
   const {
     data: proposal,
@@ -309,22 +310,61 @@ export function EditorPage() {
                 </div>
               </div>
 
-              {/* Scope of Work Textarea */}
+              {/* Scope of Work Textarea & Live Preview */}
               <div>
-                <label className="block text-xs font-semibold text-charcoal-muted uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
-                  <FileText className="h-3.5 w-3.5 text-slate-400" />
-                  Scope of Work & Deliverables
-                </label>
-                <Textarea
-                  rows={8}
-                  value={scopeOfWork}
-                  onChange={(e) => {
-                    setScopeOfWork(e.target.value);
-                    if (errors.scopeOfWork) setErrors({ ...errors, scopeOfWork: '' });
-                  }}
-                  placeholder="Specify deliverables, milestones, tech requirements, and project terms..."
-                  error={errors.scopeOfWork}
-                />
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="text-xs font-semibold text-charcoal-muted uppercase tracking-wider flex items-center gap-1.5">
+                    <FileText className="h-3.5 w-3.5 text-slate-400" />
+                    Scope of Work & Deliverables
+                  </label>
+                  <div className="flex items-center bg-slate-100 p-0.5 rounded-lg text-xs">
+                    <button
+                      type="button"
+                      onClick={() => setScopeTab('write')}
+                      className={`px-2.5 py-1 rounded-md font-semibold transition-colors ${
+                        scopeTab === 'write'
+                          ? 'bg-white text-primary shadow-xs'
+                          : 'text-slate-500 hover:text-charcoal'
+                      }`}
+                    >
+                      Write
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setScopeTab('preview')}
+                      className={`px-2.5 py-1 rounded-md font-semibold transition-colors ${
+                        scopeTab === 'preview'
+                          ? 'bg-white text-primary shadow-xs'
+                          : 'text-slate-500 hover:text-charcoal'
+                      }`}
+                    >
+                      Preview
+                    </button>
+                  </div>
+                </div>
+
+                {scopeTab === 'write' ? (
+                  <Textarea
+                    rows={8}
+                    value={scopeOfWork}
+                    onChange={(e) => {
+                      setScopeOfWork(e.target.value);
+                      if (errors.scopeOfWork) setErrors({ ...errors, scopeOfWork: '' });
+                    }}
+                    placeholder="Specify deliverables, milestones, tech requirements, and project terms..."
+                    error={errors.scopeOfWork}
+                  />
+                ) : (
+                  <div className="min-h-[180px] rounded-xl border border-slate-200 bg-slate-50/60 p-4 text-sm text-charcoal leading-relaxed whitespace-pre-line">
+                    {scopeOfWork.trim() ? (
+                      scopeOfWork
+                    ) : (
+                      <span className="text-slate-400 italic">
+                        No scope written yet. Switch to "Write" tab to add details.
+                      </span>
+                    )}
+                  </div>
+                )}
                 <p className="mt-1.5 text-xs text-charcoal-muted">
                   Be descriptive. This scope is rendered verbatim on the client-facing public page.
                 </p>
