@@ -11,7 +11,8 @@
     "build": "tsc",
     "start": "node dist/index.js",
     "dev": "tsc -w",
-    "test:create": "node test-create.js"
+    "test:create": "node test-create.js",
+    "test:suite": "node test-full-suite.js"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.6.1",
