@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useParams, Link } from '@tanstack/react-router';
 import { getProposalById, updateProposal } from '../lib/supabase';
@@ -5,6 +6,7 @@ import { formatCurrency, formatDate } from '../lib/utils';
 import { useUIStore } from '../store/uiStore';
 import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
+import { ConfirmDialog } from '../components/ui/confirm-dialog';
 import {
   FileText,
   CheckCircle2,
@@ -22,6 +24,7 @@ export function PublicViewPage() {
   const { proposalId } = useParams({ strict: false }) as { proposalId: string };
   const queryClient = useQueryClient();
   const { notifySuccess, notifyError } = useUIStore();
+  const [isApproveOpen, setIsApproveOpen] = useState(false);
 
   const {
     data: proposal,
@@ -225,7 +228,7 @@ export function PublicViewPage() {
                     ) : (
                       <Button
                         size="lg"
-                        onClick={() => approveMutation.mutate()}
+                        onClick={() => setIsApproveOpen(true)}
                         disabled={approveMutation.isPending}
                         className="w-full sm:w-auto gap-2 text-sm font-bold shadow-md bg-primary hover:bg-primary-hover px-6"
                       >
@@ -268,6 +271,35 @@ export function PublicViewPage() {
           </div>
         </div>
       </main>
+
+      {/* Styled Approval Confirmation Dialog */}
+      <ConfirmDialog
+        isOpen={isApproveOpen}
+        onClose={() => setIsApproveOpen(false)}
+        onConfirm={() => {
+          approveMutation.mutate(undefined, {
+            onSettled: () => setIsApproveOpen(false),
+          });
+        }}
+        title="Approve & Accept Proposal"
+        description={
+          <span>
+            Are you sure you want to approve this proposal for{' '}
+            <strong className="text-charcoal font-semibold">
+              "{proposal.client_name}"
+            </strong>{' '}
+            for a total investment of{' '}
+            <strong className="text-emerald-800 font-bold">
+              {formatCurrency(proposal.price)}
+            </strong>
+            ? This will accept the agreement and mark the proposal as approved.
+          </span>
+        }
+        confirmText="Yes, Approve Proposal"
+        cancelText="Cancel"
+        variant="default"
+        isLoading={approveMutation.isPending}
+      />
     </div>
   );
 }

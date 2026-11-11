@@ -10,6 +10,7 @@ import { Input } from '../components/ui/input';
 import { Textarea } from '../components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Badge } from '../components/ui/badge';
+import { ConfirmDialog } from '../components/ui/confirm-dialog';
 import {
   ArrowLeft,
   Save,
@@ -29,6 +30,7 @@ export function EditorPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { notifySuccess, notifyError } = useUIStore();
+  const [isDeleteOpen, setIsDeleteOpen] = useState(false);
 
   const {
     data: proposal,
@@ -207,11 +209,7 @@ export function EditorPage() {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => {
-              if (window.confirm(`Delete proposal for "${clientName || 'this client'}"?`)) {
-                deleteMutation.mutate();
-              }
-            }}
+            onClick={() => setIsDeleteOpen(true)}
             disabled={deleteMutation.isPending}
             className="gap-1.5 text-xs text-red-600 hover:text-red-700 hover:bg-red-50"
             title="Delete Proposal"
@@ -400,6 +398,31 @@ export function EditorPage() {
           </Card>
         </div>
       </div>
+
+      {/* Styled Confirmation Dialog for Deletion */}
+      <ConfirmDialog
+        isOpen={isDeleteOpen}
+        onClose={() => setIsDeleteOpen(false)}
+        onConfirm={() => {
+          deleteMutation.mutate(undefined, {
+            onSettled: () => setIsDeleteOpen(false),
+          });
+        }}
+        title="Delete Proposal"
+        description={
+          <span>
+            Are you sure you want to delete the proposal for{' '}
+            <strong className="text-charcoal font-semibold">
+              "{clientName || 'this client'}"
+            </strong>
+            ? This action cannot be undone and will permanently remove this record.
+          </span>
+        }
+        confirmText="Delete Proposal"
+        cancelText="Cancel"
+        variant="destructive"
+        isLoading={deleteMutation.isPending}
+      />
     </div>
   );
 }

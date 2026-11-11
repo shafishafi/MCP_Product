@@ -16,6 +16,8 @@ import {
 } from '../components/ui/table';
 import { Card, CardContent } from '../components/ui/card';
 import { CreateProposalModal } from '../components/proposals/CreateProposalModal';
+import { ConfirmDialog } from '../components/ui/confirm-dialog';
+import { Proposal } from '../types/proposal';
 import {
   Search,
   Plus,
@@ -36,6 +38,7 @@ import {
 
 export function DashboardPage() {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [proposalToDelete, setProposalToDelete] = useState<Proposal | null>(null);
   const queryClient = useQueryClient();
   const { filterStatus, setFilterStatus, searchQuery, setSearchQuery, notifySuccess, notifyError } = useUIStore();
 
@@ -389,11 +392,7 @@ export function DashboardPage() {
 
                         {/* Delete Button */}
                         <button
-                          onClick={() => {
-                            if (window.confirm(`Are you sure you want to delete proposal for "${proposal.client_name}"?`)) {
-                              deleteMutation.mutate(proposal.id);
-                            }
-                          }}
+                          onClick={() => setProposalToDelete(proposal)}
                           title="Delete Proposal"
                           disabled={deleteMutation.isPending}
                           className="inline-flex items-center justify-center h-8 w-8 rounded-lg text-slate-300 hover:text-red-600 hover:bg-red-50 transition-colors"
@@ -414,6 +413,33 @@ export function DashboardPage() {
       <CreateProposalModal
         isOpen={isCreateOpen}
         onClose={() => setIsCreateOpen(false)}
+      />
+
+      {/* Styled Confirmation Dialog for Deletion */}
+      <ConfirmDialog
+        isOpen={Boolean(proposalToDelete)}
+        onClose={() => setProposalToDelete(null)}
+        onConfirm={() => {
+          if (proposalToDelete) {
+            deleteMutation.mutate(proposalToDelete.id, {
+              onSettled: () => setProposalToDelete(null),
+            });
+          }
+        }}
+        title="Delete Proposal"
+        description={
+          <span>
+            Are you sure you want to delete the proposal for{' '}
+            <strong className="text-charcoal font-semibold">
+              "{proposalToDelete?.client_name}"
+            </strong>
+            ? This will remove the proposal from your pipeline permanently.
+          </span>
+        }
+        confirmText="Delete Proposal"
+        cancelText="Cancel"
+        variant="destructive"
+        isLoading={deleteMutation.isPending}
       />
     </div>
   );
