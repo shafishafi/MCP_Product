@@ -7,6 +7,9 @@ export interface Proposal {
   price: number;
   status: ProposalStatus;
   created_at: string;
+  signed_by?: string;
+  signer_title?: string;
+  signed_at?: string;
 }
 
 export type UpdateProposalInput = Partial<Omit<Proposal, 'id' | 'created_at'>>;
