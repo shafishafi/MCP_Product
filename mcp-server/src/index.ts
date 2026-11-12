@@ -1,5 +1,7 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
+import { SSEServerTransport } from '@modelcontextprotocol/sdk/server/sse.js';
+import http from 'http';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { z } from 'zod';
 import dotenv from 'dotenv';
@@ -380,8 +382,92 @@ server.tool(
   }
 );
 
-// 5. Start MCP Stdout/Stdio Transport
-async function main() {
+// 5. Dual Transport Support: HTTP/SSE on Render/Cloud or Stdio for Local CLI
+async function startHttpServer(port: number) {
+  const transports = new Map<string, SSEServerTransport>();
+
+  const httpServer = http.createServer(async (req, res) => {
+    // Enable CORS for web clients & remote agents
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+
+    if (req.method === 'OPTIONS') {
+      res.writeHead(204);
+      res.end();
+      return;
+    }
+
+    const host = req.headers.host || `localhost:${port}`;
+    const url = new URL(req.url || '/', `http://${host}`);
+
+    // Health check endpoint
+    if (url.pathname === '/' || url.pathname === '/health') {
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(
+        JSON.stringify({
+          status: 'ok',
+          server: 'proposeit-mcp-server',
+          version: '1.0.0',
+          mode: isSupabaseConfigured() ? 'Supabase Live' : 'Local Demo Mode',
+          sseEndpoint: '/sse',
+          messageEndpoint: '/message',
+          tools: ['create_proposal', 'list_proposals', 'get_proposal'],
+        })
+      );
+      return;
+    }
+
+    // SSE Stream endpoint
+    if (url.pathname === '/sse' && req.method === 'GET') {
+      try {
+        const transport = new SSEServerTransport('/message', res);
+        transports.set(transport.sessionId, transport);
+
+        res.on('close', () => {
+          transports.delete(transport.sessionId);
+        });
+
+        await server.connect(transport);
+      } catch (err: unknown) {
+        console.error('[SSE Error]', err);
+        if (!res.headersSent) {
+          res.writeHead(500, { 'Content-Type': 'text/plain' });
+          res.end('SSE initialization failed');
+        }
+      }
+      return;
+    }
+
+    // JSON-RPC message endpoint
+    if (url.pathname === '/message' && req.method === 'POST') {
+      const sessionId = url.searchParams.get('sessionId');
+      if (!sessionId || !transports.has(sessionId)) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Session not found or missing sessionId' }));
+        return;
+      }
+
+      const transport = transports.get(sessionId)!;
+      await transport.handlePostMessage(req, res);
+      return;
+    }
+
+    res.writeHead(404, { 'Content-Type': 'text/plain' });
+    res.end('Not found');
+  });
+
+  httpServer.listen(port, '0.0.0.0', () => {
+    console.error(
+      `ProposeIt MCP Server running via HTTP/SSE on port ${port} (${
+        isSupabaseConfigured() ? 'Connected to Supabase' : 'Local Demo Mode'
+      }).`
+    );
+    console.error(`SSE Endpoint: http://0.0.0.0:${port}/sse`);
+  });
+}
+
+async function startStdioServer() {
   const transport = new StdioServerTransport();
   await server.connect(transport);
   console.error(
@@ -389,6 +475,22 @@ async function main() {
       isSupabaseConfigured() ? 'Connected to Supabase' : 'Local Demo Mode (No Supabase credentials required)'
     }).`
   );
+}
+
+async function main() {
+  const isHttp = Boolean(
+    process.env.PORT ||
+    process.env.RENDER ||
+    process.argv.includes('--http') ||
+    process.env.MCP_TRANSPORT === 'sse'
+  );
+
+  if (isHttp) {
+    const port = parseInt(process.env.PORT || '3000', 10);
+    await startHttpServer(port);
+  } else {
+    await startStdioServer();
+  }
 }
 
 main().catch((error) => {

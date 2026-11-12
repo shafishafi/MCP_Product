@@ -35,9 +35,14 @@ type Client = 'claude' | 'cursor' | 'cli';
 
 export function McpConnectModal({ isOpen, onClose }: Props) {
   const [activeTab, setActiveTab] = useState<'setup' | 'prompts' | 'simulate'>('setup');
+  const [connectionType, setConnectionType] = useState<'cloud' | 'local'>('cloud');
   const [selectedOS, setSelectedOS] = useState<OS>('mac');
-  const [selectedClient, setSelectedClient] = useState<Client>('claude');
+  const [selectedClient, setSelectedClient] = useState<Client>('cursor');
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
+
+  // Live Hosted Render MCP URL
+  const defaultCloudUrl = 'https://mcp-product.onrender.com/sse';
+  const [cloudUrl, setCloudUrl] = useState(defaultCloudUrl);
 
   // Auto-detect base server link & default script paths (portable project-relative)
   const defaultMacPath = './mcp-server/dist/index.js';
@@ -134,14 +139,22 @@ export function McpConnectModal({ isOpen, onClose }: Props) {
   const openCmd = selectedOS === 'mac' ? macOpenCmd : winOpenCmd;
 
   // Dedicated prompt to give to an AI agent to connect itself, with dynamic server link & path
-  const aiConnectionPrompt = selectedOS === 'mac'
-    ? `Please configure and connect the ProposeIt MCP server in your tools.
+  const aiConnectionPrompt =
+    connectionType === 'cloud'
+      ? `Please configure and connect the ProposeIt MCP server in your tools.
+- Type: sse
+- URL: ${cloudUrl}
+- Server Name: proposeit
+- App Server Link: ${appServerUrl}
+Once connected, verify that the tools "create_proposal" and "list_proposals" are enabled and ready.`
+      : selectedOS === 'mac'
+      ? `Please configure and connect the ProposeIt MCP server in your tools.
 - Command: node
 - Arguments: ["${serverPath}"]
 - Server Name: proposeit
 - App Server Link: ${appServerUrl}
 Once connected, verify that the tools "create_proposal" and "list_proposals" are enabled and ready.`
-    : `Please configure and connect the ProposeIt MCP server in your tools.
+      : `Please configure and connect the ProposeIt MCP server in your tools.
 - Command: node
 - Arguments: ["${serverPath}"]
 - Config File: %APPDATA%\\Claude\\claude_desktop_config.json
@@ -149,21 +162,42 @@ Once connected, verify that the tools "create_proposal" and "list_proposals" are
 - App Server Link: ${appServerUrl}
 Once connected, verify that the tools "create_proposal" and "list_proposals" are enabled and ready.`;
 
-  const claudeDesktopConfig = JSON.stringify(
-    {
-      mcpServers: {
-        proposeit: {
-          command: 'node',
-          args: [serverPath],
-        },
-      },
-    },
-    null,
-    2
-  );
+  const claudeDesktopConfig =
+    connectionType === 'cloud'
+      ? JSON.stringify(
+          {
+            mcpServers: {
+              proposeit: {
+                command: 'npx',
+                args: ['-y', 'mcp-remote', cloudUrl],
+              },
+            },
+          },
+          null,
+          2
+        )
+      : JSON.stringify(
+          {
+            mcpServers: {
+              proposeit: {
+                command: 'node',
+                args: [serverPath],
+              },
+            },
+          },
+          null,
+          2
+        );
 
-  const cursorCommand = `node ${serverPath}`;
-  const claudeCodeCmd = `claude mcp add proposeit -- node ${serverPath}`;
+  const cursorCommand =
+    connectionType === 'cloud'
+      ? cloudUrl
+      : `node ${serverPath}`;
+
+  const claudeCodeCmd =
+    connectionType === 'cloud'
+      ? `claude mcp add proposeit -- ${cloudUrl}`
+      : `claude mcp add proposeit -- node ${serverPath}`;
 
   // Ready-to-use copyable proposal creation prompt incorporating server link
   const generatedAiPrompt = `Create a professional project proposal for client "${promptClient}" with an investment of ₹${(
@@ -273,34 +307,82 @@ Once connected, verify that the tools "create_proposal" and "list_proposals" are
           {/* TAB 1: SETUP (MAC + WINDOWS WITH AUTO-CONVERTING SERVER LINK) */}
           {activeTab === 'setup' && (
             <div className="space-y-4">
-              {/* OS & Client Selectors */}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-50 p-3 rounded-xl border border-slate-200">
-                {/* Operating System Selector */}
+              {/* Connection Mode Selector: Live Cloud Hosted vs Local Script */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 p-3 bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200 rounded-xl text-xs">
                 <div className="flex items-center gap-2">
-                  <span className="text-xs font-bold text-charcoal">Operating System:</span>
-                  <div className="flex bg-white rounded-lg p-0.5 border border-slate-200">
+                  <span className="font-bold text-emerald-950">Mode:</span>
+                  <div className="flex bg-white rounded-lg p-0.5 border border-emerald-200 shadow-xs">
                     <button
-                      onClick={() => handleOSChange('mac')}
-                      className={`px-2.5 py-1 text-xs font-semibold rounded-md transition-all ${
-                        selectedOS === 'mac'
-                          ? 'bg-emerald-600 text-white shadow-xs'
+                      onClick={() => setConnectionType('cloud')}
+                      className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${
+                        connectionType === 'cloud'
+                          ? 'bg-primary text-white shadow-xs'
                           : 'text-charcoal-muted hover:text-charcoal'
                       }`}
                     >
-                      macOS
+                      ☁️ Live Render Cloud
                     </button>
                     <button
-                      onClick={() => handleOSChange('windows')}
-                      className={`px-2.5 py-1 text-xs font-semibold rounded-md transition-all ${
-                        selectedOS === 'windows'
-                          ? 'bg-emerald-600 text-white shadow-xs'
+                      onClick={() => setConnectionType('local')}
+                      className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${
+                        connectionType === 'local'
+                          ? 'bg-primary text-white shadow-xs'
                           : 'text-charcoal-muted hover:text-charcoal'
                       }`}
                     >
-                      Windows
+                      💻 Local Subprocess
                     </button>
                   </div>
                 </div>
+
+                <div className="flex items-center gap-1.5 text-[11px] text-emerald-800 font-medium">
+                  {connectionType === 'cloud' ? (
+                    <span className="bg-emerald-100 text-emerald-900 px-2 py-0.5 rounded-full border border-emerald-300 font-bold text-[10px]">
+                      Live Hosted: mcp-product.onrender.com
+                    </span>
+                  ) : (
+                    <span className="bg-white text-emerald-900 px-2 py-0.5 rounded-full border border-emerald-300 font-bold text-[10px]">
+                      Requires Local Node.js
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* OS & Client Selectors */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-50 p-3 rounded-xl border border-slate-200">
+                {/* Operating System Selector (only needed for local mode) */}
+                {connectionType === 'local' ? (
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold text-charcoal">OS:</span>
+                    <div className="flex bg-white rounded-lg p-0.5 border border-slate-200">
+                      <button
+                        onClick={() => handleOSChange('mac')}
+                        className={`px-2.5 py-1 text-xs font-semibold rounded-md transition-all ${
+                          selectedOS === 'mac'
+                            ? 'bg-emerald-600 text-white shadow-xs'
+                            : 'text-charcoal-muted hover:text-charcoal'
+                        }`}
+                      >
+                        macOS
+                      </button>
+                      <button
+                        onClick={() => handleOSChange('windows')}
+                        className={`px-2.5 py-1 text-xs font-semibold rounded-md transition-all ${
+                          selectedOS === 'windows'
+                            ? 'bg-emerald-600 text-white shadow-xs'
+                            : 'text-charcoal-muted hover:text-charcoal'
+                        }`}
+                      >
+                        Windows
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2 text-xs text-charcoal-muted">
+                    <Globe className="h-3.5 w-3.5 text-emerald-600" />
+                    <span>Works universally across macOS, Windows & Linux</span>
+                  </div>
+                )}
 
                 {/* AI Client Selector */}
                 <div className="flex items-center gap-2">
@@ -345,46 +427,76 @@ Once connected, verify that the tools "create_proposal" and "list_proposals" are
                 <div className="flex items-center justify-between text-xs">
                   <div className="flex items-center gap-1.5 font-bold text-emerald-950">
                     <Globe className="h-3.5 w-3.5 text-emerald-700" />
-                    <span>Auto-Converted Server Link & Path</span>
+                    <span>Auto-Converted Server Link & Endpoint</span>
                   </div>
                   <button
                     onClick={() => setShowPathSettings(!showPathSettings)}
                     className="text-[11px] text-primary hover:underline font-semibold"
                   >
-                    {showPathSettings ? 'Hide Path Controls' : 'Edit Server Path / Link'}
+                    {showPathSettings ? 'Hide Settings' : 'Edit Endpoints / Link'}
                   </button>
                 </div>
 
                 <div className="text-[11px] text-emerald-800 flex items-center justify-between">
                   <span className="truncate max-w-[85%] font-mono">
-                    Script: <strong className="text-emerald-950">{serverPath}</strong>
+                    {connectionType === 'cloud' ? (
+                      <>
+                        SSE Endpoint: <strong className="text-emerald-950">{cloudUrl}</strong>
+                      </>
+                    ) : (
+                      <>
+                        Script: <strong className="text-emerald-950">{serverPath}</strong>
+                      </>
+                    )}
                   </span>
                   <span className="text-[10px] bg-white text-emerald-800 font-bold px-1.5 py-0.5 rounded border border-emerald-200">
-                    {selectedOS === 'mac' ? 'POSIX Path' : 'Win32 Path'}
+                    {connectionType === 'cloud' ? 'Hosted SSE' : selectedOS === 'mac' ? 'POSIX Path' : 'Win32 Path'}
                   </span>
                 </div>
 
                 {showPathSettings && (
                   <div className="pt-2 border-t border-emerald-200 space-y-2.5">
-                    <div>
-                      <label className="block text-[11px] font-semibold text-emerald-900 mb-1 flex items-center justify-between">
-                        <span className="flex items-center gap-1">
-                          <FolderCode className="h-3 w-3" /> MCP Script Location:
-                        </span>
-                        <button
-                          onClick={() => setServerPath(selectedOS === 'mac' ? defaultMacPath : defaultWinPath)}
-                          className="text-[10px] text-primary hover:underline flex items-center gap-0.5"
-                        >
-                          <RotateCcw className="h-2.5 w-2.5" /> Reset to Default
-                        </button>
-                      </label>
-                      <Input
-                        value={serverPath}
-                        onChange={(e) => setServerPath(e.target.value)}
-                        placeholder={selectedOS === 'mac' ? defaultMacPath : defaultWinPath}
-                        className="text-xs font-mono h-8 bg-white"
-                      />
-                    </div>
+                    {connectionType === 'cloud' ? (
+                      <div>
+                        <label className="block text-[11px] font-semibold text-emerald-900 mb-1 flex items-center justify-between">
+                          <span className="flex items-center gap-1">
+                            <Globe className="h-3 w-3" /> Hosted MCP Server SSE URL:
+                          </span>
+                          <button
+                            onClick={() => setCloudUrl(defaultCloudUrl)}
+                            className="text-[10px] text-primary hover:underline flex items-center gap-0.5"
+                          >
+                            <RotateCcw className="h-2.5 w-2.5" /> Reset to Default
+                          </button>
+                        </label>
+                        <Input
+                          value={cloudUrl}
+                          onChange={(e) => setCloudUrl(e.target.value)}
+                          placeholder={defaultCloudUrl}
+                          className="text-xs font-mono h-8 bg-white"
+                        />
+                      </div>
+                    ) : (
+                      <div>
+                        <label className="block text-[11px] font-semibold text-emerald-900 mb-1 flex items-center justify-between">
+                          <span className="flex items-center gap-1">
+                            <FolderCode className="h-3 w-3" /> MCP Script Location:
+                          </span>
+                          <button
+                            onClick={() => setServerPath(selectedOS === 'mac' ? defaultMacPath : defaultWinPath)}
+                            className="text-[10px] text-primary hover:underline flex items-center gap-0.5"
+                          >
+                            <RotateCcw className="h-2.5 w-2.5" /> Reset to Default
+                          </button>
+                        </label>
+                        <Input
+                          value={serverPath}
+                          onChange={(e) => setServerPath(e.target.value)}
+                          placeholder={selectedOS === 'mac' ? defaultMacPath : defaultWinPath}
+                          className="text-xs font-mono h-8 bg-white"
+                        />
+                      </div>
+                    )}
 
                     <div>
                       <label className="block text-[11px] font-semibold text-emerald-900 mb-1 flex items-center justify-between">
@@ -522,8 +634,8 @@ Once connected, verify that the tools "create_proposal" and "list_proposals" are
                     <strong>Step 2:</strong> Click <strong>+ Add New MCP Server</strong>:
                     <ul className="list-disc list-inside mt-1 space-y-0.5">
                       <li>Name: <code className="font-mono bg-slate-100 px-1 rounded">proposeit</code></li>
-                      <li>Type: <code className="font-mono bg-slate-100 px-1 rounded">command</code></li>
-                      <li>Command:</li>
+                      <li>Type: <code className="font-mono bg-slate-100 px-1 rounded">{connectionType === 'cloud' ? 'sse' : 'command'}</code></li>
+                      <li>{connectionType === 'cloud' ? 'Server URL:' : 'Command:'}</li>
                     </ul>
                   </div>
                   <div className="relative">
@@ -535,7 +647,7 @@ Once connected, verify that the tools "create_proposal" and "list_proposals" are
                       className="absolute top-2.5 right-2.5 bg-slate-800 hover:bg-slate-700 text-white rounded-lg px-2.5 py-1 text-xs font-medium flex items-center gap-1 border border-slate-700 shadow-sm"
                     >
                       {copiedKey === 'cursorcmd' ? <Check className="h-3 w-3 text-emerald-400" /> : <Copy className="h-3 w-3" />}
-                      <span>Copy Command</span>
+                      <span>{connectionType === 'cloud' ? 'Copy SSE URL' : 'Copy Command'}</span>
                     </button>
                   </div>
                 </div>
