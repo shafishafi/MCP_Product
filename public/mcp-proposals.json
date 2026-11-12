@@ -1,5 +1,21 @@
 [
   {
+    "id": "prop-mcp-mwcxwj5k",
+    "client_name": "The Royal Dine Restaurant",
+    "scope_of_work": "1. 3-Page Modern Restaurant Website:\n- Homepage & Brand Story: High-impact hero banner, chef signature dish highlights, guest reviews, operating hours, and instant reservation CTA.\n- Interactive Digital Menu: Categorized menu sections (Starters, Main Courses, Chef Specials, Beverages & Desserts), dietary badges (Veg, Non-Veg, Vegan, Gluten-Free), and downloadable QR/PDF menu.\n- Reservations, Location & Contact: Online table booking form, embedded Google Maps with directions, WhatsApp direct order trigger, and private event inquiry form.\n\n2. Performance, Conversion & Local SEO:\n- Mobile-first responsive UI built for frictionless phone ordering and table reservations.\n- Local SEO & Restaurant Schema (Schema.org/Restaurant) for Google Maps & search ranking.\n- Fast page speed optimization and SSL security.\n\n3. Phased Milestones & Handover:\n- Week 1: Design concept, content gathering & menu architecture.\n- Week 2: UI development, reservation widget integration, and mobile testing.\n- Week 3: Domain connection, launch to production & client training.",
+    "price": 50000,
+    "status": "draft",
+    "created_at": "2026-11-12T02:39:44.120Z"
+  },
+  {
+    "id": "prop-mcp-mwcxwj5k",
+    "client_name": "The Royal Dine Restaurant",
+    "scope_of_work": "1. 3-Page Modern Restaurant Website:\n- Homepage & Brand Story: High-impact hero banner, chef signature dish highlights, guest reviews, operating hours, and instant reservation CTA.\n- Interactive Digital Menu: Categorized menu sections (Starters, Main Courses, Chef Specials, Beverages & Desserts), dietary badges (Veg, Non-Veg, Vegan, Gluten-Free), and downloadable QR/PDF menu.\n- Reservations, Location & Contact: Online table booking form, embedded Google Maps with directions, WhatsApp direct order trigger, and private event inquiry form.\n\n2. Performance, Conversion & Local SEO:\n- Mobile-first responsive UI built for frictionless phone ordering and table reservations.\n- Local SEO & Restaurant Schema (Schema.org/Restaurant) for Google Maps & search ranking.\n- Fast page speed optimization and SSL security.\n\n3. Phased Milestones & Handover:\n- Week 1: Design concept, content gathering & menu architecture.\n- Week 2: UI development, reservation widget integration, and mobile testing.\n- Week 3: Domain connection, launch to production & client training.",
+    "price": 50000,
+    "status": "draft",
+    "created_at": "2026-11-12T02:39:44.120Z"
+  },
+  {
     "id": "prop-mcp-mwcu0foz",
     "client_name": "Smith Plumbing",
     "scope_of_work": "1. 5-Page Responsive Web Architecture:\n- Homepage: High-converting hero section with 24/7 emergency dispatch hotline, one-tap mobile calling, instant quote request modal, customer review ratings, and trust badges (Licensed, Bonded & Insured).\n- Services Page: Full showcase of Residential & Commercial Plumbing, Emergency Repairs, Drain Cleaning, Water Heater Replacement, and Sewer Line Camera Inspections.\n- About Us: Company history, certified master plumber bios, service guarantee, and safety accreditations.\n- Emergency Services: Dedicated urgent dispatch portal with one-tap calling, response time guarantees, and transparent pricing.\n- Contact & Online Scheduling: Interactive appointment booking calendar, service radius map, Google Maps integration, and automated lead notifications.\n\n2. Performance, Conversion & Local SEO Optimization:\n- Mobile-first responsive UI built for urgent mobile callers (sticky call bar & click-to-call CTAs).\n- Complete Local SEO setup with Plumber LocalBusiness schema markup and Google Business Profile optimization.\n- Sub-second load speeds and WCAG AA accessibility compliance.\n- Secure SSL integration, anti-spam form protections, and webhook notifications.\n\n3. Timeline & Phased Milestones:\n- Week 1: Wireframing, information architecture & copy drafting.\n- Week 2: High-fidelity visual mockups & prototype approval.\n- Week 3: Development, booking form integration & local SEO setup.\n- Week 4: Multi-device QA audit, production deployment, and client handover.",
