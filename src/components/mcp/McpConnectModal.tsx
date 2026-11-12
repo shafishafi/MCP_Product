@@ -39,9 +39,9 @@ export function McpConnectModal({ isOpen, onClose }: Props) {
   const [selectedClient, setSelectedClient] = useState<Client>('claude');
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
-  // Auto-detect base server link & default script paths
-  const defaultMacPath = '/Users/shafi/prop/mcp-server/dist/index.js';
-  const defaultWinPath = 'C:\\Users\\shafi\\prop\\mcp-server\\dist\\index.js';
+  // Auto-detect base server link & default script paths (portable project-relative)
+  const defaultMacPath = './mcp-server/dist/index.js';
+  const defaultWinPath = '.\\mcp-server\\dist\\index.js';
 
   const [serverPath, setServerPath] = useState(defaultMacPath);
   const [appServerUrl, setAppServerUrl] = useState(() => {
@@ -81,13 +81,17 @@ export function McpConnectModal({ isOpen, onClose }: Props) {
   const handleOSChange = (newOS: OS) => {
     setSelectedOS(newOS);
     if (newOS === 'windows') {
-      if (serverPath.startsWith('/Users/')) {
+      if (serverPath.startsWith('./')) {
+        setServerPath(serverPath.replace(/^\.\//, '.\\').replace(/\//g, '\\'));
+      } else if (serverPath.startsWith('/Users/')) {
         setServerPath(serverPath.replace(/^\/Users\//, 'C:\\Users\\').replace(/\//g, '\\'));
-      } else if (!serverPath.includes(':\\')) {
+      } else if (!serverPath.includes(':\\') && !serverPath.startsWith('.\\')) {
         setServerPath(defaultWinPath);
       }
     } else {
-      if (serverPath.match(/^[a-zA-Z]:\\Users\\/i)) {
+      if (serverPath.startsWith('.\\')) {
+        setServerPath(serverPath.replace(/^\.\\/, './').replace(/\\/g, '/'));
+      } else if (serverPath.match(/^[a-zA-Z]:\\Users\\/i)) {
         setServerPath(serverPath.replace(/^[a-zA-Z]:\\Users\\/i, '/Users/').replace(/\\/g, '/'));
       } else if (serverPath.includes('\\')) {
         setServerPath(serverPath.replace(/\\/g, '/'));
