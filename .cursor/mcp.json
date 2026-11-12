@@ -1,13 +1,7 @@
 {
   "mcpServers": {
     "proposeit": {
-      "command": "node",
-      "args": [
-        "./mcp-server/dist/index.js"
-      ],
-      "env": {
-        "APP_URL": "https://proposeit.netlify.app"
-      }
+      "url": "https://mcp-product.onrender.com/sse"
     }
   }
 }
